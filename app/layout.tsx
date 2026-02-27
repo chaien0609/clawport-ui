@@ -1,24 +1,38 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
 import "./globals.css";
 import { NavLinks } from "@/components/NavLinks";
 
-const geist = Geist({ subsets: ["latin"] });
-
 export const metadata: Metadata = {
-  title: "The Manor — Command Centre",
+  title: "Manor — Command Centre",
   description: "AI Agent Management Dashboard",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <body className={geist.className}>
-        <div className="flex h-screen overflow-hidden bg-[#0a0a0f]">
-          <aside className="w-56 flex-shrink-0 border-r border-[#262632] bg-[#0d0d14] flex flex-col">
-            <div className="p-5 border-b border-[#262632]">
-              <div className="text-[#f5c518] font-bold text-lg tracking-tight">🏰 The Manor</div>
-              <div className="text-[#86869b] text-xs mt-0.5">Command Centre</div>
+      <body>
+        <div className="flex h-screen overflow-hidden bg-black">
+          <aside
+            className="w-[220px] flex-shrink-0 bg-[#1c1c1e] flex flex-col"
+            style={{ boxShadow: "2px 0 12px rgba(0,0,0,0.3)" }}
+          >
+            <div className="p-5">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#f5c518] to-[#e8b800] flex items-center justify-center text-lg"
+                  style={{ boxShadow: "0 2px 8px rgba(245,197,24,0.3)" }}
+                >
+                  🏰
+                </div>
+                <div>
+                  <div className="font-semibold text-[17px] text-white tracking-[-0.3px]">
+                    Manor
+                  </div>
+                  <div className="text-[12px] text-[rgba(235,235,245,0.5)] tracking-wide">
+                    Command Centre
+                  </div>
+                </div>
+              </div>
             </div>
             <NavLinks />
           </aside>

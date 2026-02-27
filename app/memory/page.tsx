@@ -19,27 +19,73 @@ function wordCount(text: string): number {
 
 function simpleMarkdown(text: string): string {
   return text
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/^#### (.+)$/gm, '<h4 class="text-sm font-semibold text-[#c8c8d4] mt-4 mb-1">$1</h4>')
-    .replace(/^### (.+)$/gm, '<h3 class="text-base font-semibold text-[#c8c8d4] mt-5 mb-1.5">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 class="text-lg font-bold text-white mt-6 mb-2 border-b border-[#262632] pb-1">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 class="text-xl font-bold text-white mt-4 mb-3">$1</h1>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
-    .replace(/`([^`]+)`/g, '<code class="bg-[#1a1a24] text-[#f5c518] px-1 py-0.5 rounded text-xs font-mono">$1</code>')
-    .replace(/^- (.+)$/gm, '<li class="ml-4 text-[#c8c8d4] text-sm leading-relaxed list-disc">$1</li>')
-    .replace(/^(\d+)\. (.+)$/gm, '<li class="ml-4 text-[#c8c8d4] text-sm leading-relaxed list-decimal">$2</li>')
-    .replace(/\n{2,}/g, '</p><p class="mb-3">')
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(
+      /^#### (.+)$/gm,
+      '<h4 class="text-[14px] font-semibold" style="color:rgba(235,235,245,0.8);margin-top:1rem;margin-bottom:0.25rem">$1</h4>'
+    )
+    .replace(
+      /^### (.+)$/gm,
+      '<h3 class="text-[15px] font-semibold" style="color:rgba(235,235,245,0.9);margin-top:1.25rem;margin-bottom:0.375rem">$1</h3>'
+    )
+    .replace(
+      /^## (.+)$/gm,
+      '<h2 class="text-[17px] font-bold text-white" style="margin-top:1.5rem;margin-bottom:0.5rem;padding-bottom:0.25rem;border-bottom:1px solid rgba(84,84,88,0.4)">$1</h2>'
+    )
+    .replace(
+      /^# (.+)$/gm,
+      '<h1 class="text-[20px] font-bold text-white" style="margin-top:1rem;margin-bottom:0.75rem">$1</h1>'
+    )
+    .replace(
+      /\*\*(.+?)\*\*/g,
+      '<strong class="text-white font-semibold">$1</strong>'
+    )
+    .replace(
+      /`([^`]+)`/g,
+      '<code class="bg-[#2c2c2e] text-[#f5c518] px-1.5 py-0.5 rounded-md text-[12px] font-mono">$1</code>'
+    )
+    .replace(
+      /^- (.+)$/gm,
+      '<li class="ml-4 text-[14px] leading-[1.7] list-disc" style="color:rgba(235,235,245,0.7)">$1</li>'
+    )
+    .replace(
+      /^(\d+)\. (.+)$/gm,
+      '<li class="ml-4 text-[14px] leading-[1.7] list-decimal" style="color:rgba(235,235,245,0.7)">$2</li>'
+    )
+    .replace(
+      /\n{2,}/g,
+      '</p><p class="mb-3" style="color:rgba(235,235,245,0.7)">'
+    )
     .replace(/\n/g, "<br/>");
 }
 
 function colorizeJson(json: string): string {
   return json
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/"([^"]+)"(?=\s*:)/g, '<span class="text-[#f5c518]">"$1"</span>')
-    .replace(/:\s*"([^"]*?)"/g, ': <span class="text-green-400">"$1"</span>')
-    .replace(/:\s*(\d+\.?\d*)/g, ': <span class="text-blue-400">$1</span>')
-    .replace(/:\s*(true|false)/g, ': <span class="text-purple-400">$1</span>')
-    .replace(/:\s*(null)/g, ': <span class="text-[#86869b]">$1</span>');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(
+      /"([^"]+)"(?=\s*:)/g,
+      '<span class="text-[#f5c518]">"$1"</span>'
+    )
+    .replace(
+      /:\s*"([^"]*?)"/g,
+      ': <span class="text-[#30d158]">"$1"</span>'
+    )
+    .replace(
+      /:\s*(\d+\.?\d*)/g,
+      ': <span class="text-[#0a84ff]">$1</span>'
+    )
+    .replace(
+      /:\s*(true|false)/g,
+      ': <span class="text-[#bf5af2]">$1</span>'
+    )
+    .replace(
+      /:\s*(null)/g,
+      ': <span style="color:rgba(235,235,245,0.3)">$1</span>'
+    );
 }
 
 export default function MemoryPage() {
@@ -61,7 +107,8 @@ export default function MemoryPage() {
     refresh();
   }, []);
 
-  const isJSON = selected?.label.includes("JSON") || selected?.path.endsWith(".json");
+  const isJSON =
+    selected?.label.includes("JSON") || selected?.path.endsWith(".json");
 
   let renderedContent: React.ReactNode = null;
   if (selected) {
@@ -70,30 +117,45 @@ export default function MemoryPage() {
         const pretty = JSON.stringify(JSON.parse(selected.content), null, 2);
         const lines = pretty.split("\n");
         renderedContent = (
-          <div className="flex">
-            {/* Line numbers */}
-            <div className="flex-shrink-0 border-r border-[#262632] pr-3 mr-3 select-none">
-              {lines.map((_, i) => (
-                <div key={i} className="font-mono text-[10px] text-[#86869b]/40 leading-relaxed text-right min-w-[2.5ch]">
-                  {i + 1}
-                </div>
-              ))}
+          <div className="bg-[#1c1c1e] rounded-xl p-5 border border-[rgba(84,84,88,0.3)]">
+            <div className="flex">
+              {/* Line numbers */}
+              <div className="flex-shrink-0 pr-4 mr-4 select-none border-r border-[rgba(84,84,88,0.3)]">
+                {lines.map((_, i) => (
+                  <div
+                    key={i}
+                    className="font-mono text-[11px] leading-relaxed text-right min-w-[2.5ch]"
+                    style={{ color: "rgba(235,235,245,0.2)" }}
+                  >
+                    {i + 1}
+                  </div>
+                ))}
+              </div>
+              {/* Syntax highlighted content */}
+              <pre
+                className="font-mono text-[13px] whitespace-pre-wrap leading-relaxed flex-1"
+                dangerouslySetInnerHTML={{ __html: colorizeJson(pretty) }}
+              />
             </div>
-            {/* Syntax highlighted content */}
-            <pre
-              className="font-mono text-xs whitespace-pre-wrap leading-relaxed flex-1"
-              dangerouslySetInnerHTML={{ __html: colorizeJson(pretty) }}
-            />
           </div>
         );
       } catch {
-        renderedContent = <pre className="font-mono text-xs text-red-400 whitespace-pre-wrap">{selected.content}</pre>;
+        renderedContent = (
+          <div className="bg-[#1c1c1e] rounded-xl p-5 border border-[rgba(84,84,88,0.3)]">
+            <pre className="font-mono text-[13px] text-[#ff453a] whitespace-pre-wrap">
+              {selected.content}
+            </pre>
+          </div>
+        );
       }
     } else {
       renderedContent = (
         <div
-          className="text-[#c8c8d4] text-sm leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: `<p class="mb-3">${simpleMarkdown(selected.content)}</p>` }}
+          className="text-[14px] leading-[1.7]"
+          style={{ color: "rgba(235,235,245,0.7)" }}
+          dangerouslySetInnerHTML={{
+            __html: `<p class="mb-3" style="color:rgba(235,235,245,0.7)">${simpleMarkdown(selected.content)}</p>`,
+          }}
         />
       );
     }
@@ -104,35 +166,53 @@ export default function MemoryPage() {
   const words = selected ? wordCount(selected.content) : 0;
 
   return (
-    <div className="flex h-full bg-[#0a0a0f]">
+    <div className="flex h-full bg-[#000000]">
       {/* Sidebar */}
-      <div className="w-64 flex-shrink-0 border-r border-[#262632] bg-[#0d0d14] flex flex-col">
-        <div className="p-4 border-b border-[#262632] flex items-center justify-between">
-          <span className="font-bold text-white text-sm">🧠 Memory</span>
-          <button onClick={refresh} className="text-xs text-[#86869b] hover:text-white transition-colors">↻</button>
+      <div className="w-[240px] flex-shrink-0 bg-[#1c1c1e] flex flex-col">
+        {/* Sidebar header */}
+        <div
+          className="p-4 flex items-center justify-between flex-shrink-0"
+          style={{ boxShadow: "0 1px 0 rgba(84,84,88,0.4)" }}
+        >
+          <span className="text-[17px] font-semibold text-white">Memory</span>
+          <button
+            onClick={refresh}
+            className="text-[rgba(235,235,245,0.4)] hover:text-white transition-colors text-[16px]"
+          >
+            &#8635;
+          </button>
         </div>
+
+        {/* File list */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="p-4 text-xs text-[#86869b] animate-pulse">Loading...</div>
+            <div
+              className="p-4 text-[rgba(235,235,245,0.5)] text-[14px] animate-pulse"
+            >
+              Loading...
+            </div>
           ) : (
-            files.map((file) => {
+            files.map((file, idx) => {
               const isActive = selected?.path === file.path;
+              const isLast = idx === files.length - 1;
               return (
                 <button
                   key={file.path}
                   onClick={() => setSelected(file)}
-                  className={`group w-full text-left px-4 py-3 border-b border-[#262632] hover:bg-[#13131a] transition-colors flex items-center gap-2.5 ${
-                    isActive ? "bg-[#13131a]" : ""
+                  className={`w-full text-left px-4 py-3 transition-colors ${
+                    !isLast ? "border-b border-[rgba(84,84,88,0.3)]" : ""
+                  } ${
+                    isActive
+                      ? "bg-[rgba(245,197,24,0.1)] border-l-[3px] border-l-[#f5c518]"
+                      : "border-l-[3px] border-l-transparent hover:bg-[rgba(120,120,128,0.12)]"
                   }`}
                 >
-                  {/* Active indicator dot */}
-                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors ${isActive ? "bg-[#f5c518]" : "bg-transparent"}`} />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-medium text-[#f5f5f7] truncate">{file.label}</div>
-                    <div className="text-[10px] text-[#86869b] mt-0.5">{timeAgo(file.lastModified)}</div>
+                  <div className="text-[14px] font-medium text-white truncate">
+                    {file.label}
                   </div>
-                  {/* Hover arrow */}
-                  <span className="text-[#86869b] text-xs opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">→</span>
+                  <div className="text-[12px] mt-0.5" style={{ color: "rgba(235,235,245,0.5)" }}>
+                    {timeAgo(file.lastModified)}
+                  </div>
                 </button>
               );
             })
@@ -140,33 +220,63 @@ export default function MemoryPage() {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden bg-[#000000]">
         {selected ? (
           <>
-            <div className="border-b border-[#262632] bg-[#0d0d14] px-6 py-4 flex items-center justify-between flex-shrink-0">
+            {/* Content header */}
+            <div
+              className="px-8 py-4 flex items-center justify-between flex-shrink-0"
+              style={{ boxShadow: "0 1px 0 rgba(84,84,88,0.4)" }}
+            >
               <div>
-                <div className="font-semibold text-white">{selected.label}</div>
-                <div className="text-[10px] text-[#86869b] mt-0.5 font-mono">{selected.path}</div>
-                <div className="text-[10px] text-[#86869b] mt-0.5">
+                <div className="text-[17px] font-bold text-white">
+                  {selected.label}
+                </div>
+                <div
+                  className="text-[12px] font-mono mt-0.5"
+                  style={{ color: "rgba(235,235,245,0.5)" }}
+                >
+                  {selected.path}
+                </div>
+                <div
+                  className="text-[12px] mt-0.5"
+                  style={{ color: "rgba(235,235,245,0.4)" }}
+                >
                   {isJSON ? (
-                    <>{lineCount} lines · {charCount.toLocaleString()} characters</>
+                    <>
+                      {lineCount} lines &middot;{" "}
+                      {charCount.toLocaleString()} characters
+                    </>
                   ) : (
-                    <>{words.toLocaleString()} words · {lineCount} lines · {charCount.toLocaleString()} chars</>
+                    <>
+                      {words.toLocaleString()} words &middot; {lineCount} lines
+                      &middot; {charCount.toLocaleString()} chars
+                    </>
                   )}
                 </div>
               </div>
-              <div className="text-xs text-[#86869b]">Modified {timeAgo(selected.lastModified)}</div>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className={`${isJSON ? "bg-[#0d0d14] rounded-xl p-5 border border-[#262632]" : ""}`}>
-                {renderedContent}
+              <div
+                className="text-[12px]"
+                style={{ color: "rgba(235,235,245,0.4)" }}
+              >
+                Modified {timeAgo(selected.lastModified)}
               </div>
+            </div>
+
+            {/* Content body */}
+            <div className="flex-1 overflow-y-auto px-8 py-6">
+              <div className="max-w-[720px] mx-auto">{renderedContent}</div>
             </div>
           </>
         ) : (
-          <div className="flex items-center justify-center h-full text-[#86869b] text-sm">
-            Select a file from the sidebar
+          <div className="flex items-center justify-center h-full">
+            <span
+              className="text-[15px]"
+              style={{ color: "rgba(235,235,245,0.5)" }}
+            >
+              Select a file from the sidebar
+            </span>
           </div>
         )}
       </div>

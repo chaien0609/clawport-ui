@@ -1,75 +1,85 @@
+@import "tailwindcss";
 @import "@xyflow/react/dist/style.css";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
-:root {
-  --background: 10 10 15;
-  --foreground: 245 245 247;
-  --card: 19 19 26;
-  --card-foreground: 245 245 247;
-  --primary: 245 197 24;
-  --primary-foreground: 10 10 15;
-  --muted: 38 38 50;
-  --muted-foreground: 134 134 155;
-  --border: 38 38 50;
-  --accent: 245 197 24;
-  --accent-foreground: 10 10 15;
-  --radius: 0.75rem;
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+  --font-mono: "SF Mono", Monaco, Menlo, "Courier New", monospace;
+
+  --color-apple-bg: #000000;
+  --color-apple-elevated: #1c1c1e;
+  --color-apple-grouped: #2c2c2e;
+  --color-apple-separator: rgba(84, 84, 88, 0.6);
+  --color-apple-primary: #ffffff;
+  --color-apple-secondary: rgba(235, 235, 245, 0.6);
+  --color-apple-tertiary: rgba(235, 235, 245, 0.3);
+  --color-apple-blue: #0a84ff;
+  --color-apple-green: #30d158;
+  --color-apple-orange: #ff9f0a;
+  --color-apple-red: #ff453a;
+  --color-apple-purple: #bf5af2;
+  --color-apple-gold: #f5c518;
+  --color-apple-fill: rgba(120, 120, 128, 0.36);
+  --color-apple-fill-secondary: rgba(120, 120, 128, 0.32);
+
+  --radius-apple: 12px;
+  --radius-apple-lg: 16px;
+  --radius-apple-xl: 20px;
+
+  --shadow-apple: 0 2px 12px rgba(0, 0, 0, 0.4);
+  --shadow-apple-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+  --shadow-apple-inset: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  --animate-fade-in: fadeIn 0.2s ease-out;
+  --animate-slide-in: slideIn 0.2s ease-out;
+  --animate-pulse-red: pulse-red 1.5s ease-in-out infinite;
+  --animate-blink: blink-cursor 1s step-end infinite;
+  --animate-float-hint: float-hint 2s ease-in-out infinite;
 }
-
-* { box-sizing: border-box; }
 
 html { scroll-behavior: smooth; }
 
 body {
-  background: #0a0a0f;
-  color: #f5f5f7;
+  background: #000000;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
-::selection {
-  background: #f5c518;
-  color: #0a0a0f;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+/* Apple-style scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #262632; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #f5c518; }
+::-webkit-scrollbar-thumb { background: rgba(120,120,128,0.36); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(120,120,128,0.6); background-clip: content-box; border: 2px solid transparent; }
 
-/* React Flow overrides */
-.react-flow__background { background: #0a0a0f !important; }
-.react-flow__minimap { background: #13131a !important; border: 1px solid #262632; border-radius: 8px; }
-.react-flow__controls { background: #13131a !important; border: 1px solid #262632 !important; border-radius: 8px; }
-.react-flow__controls-button { background: #13131a !important; border-color: #262632 !important; color: #f5f5f7 !important; }
-.react-flow__edge-path { opacity: 0.5; }
+/* Selection */
+::selection { background: rgba(245,197,24,0.25); color: #ffffff; }
 
-/* Pulse animation for error indicators */
-@keyframes error-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-.animate-error-pulse {
-  animation: error-pulse 2s ease-in-out infinite;
-}
+/* React Flow overrides — Apple dark */
+.react-flow__background { background: #000000 !important; }
+.react-flow__minimap { background: #1c1c1e !important; border: 1px solid rgba(84,84,88,0.6); border-radius: 12px; overflow: hidden; }
+.react-flow__controls { background: #1c1c1e !important; border: 1px solid rgba(84,84,88,0.6) !important; border-radius: 12px !important; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+.react-flow__controls-button { background: #1c1c1e !important; border-color: rgba(84,84,88,0.6) !important; color: rgba(235,235,245,0.6) !important; }
+.react-flow__controls-button:hover { background: #2c2c2e !important; color: #ffffff !important; }
+.react-flow__edge-path { opacity: 0.35; }
 
-/* Blinking cursor for streaming */
-@keyframes blink-cursor {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-.animate-blink {
-  animation: blink-cursor 1s step-end infinite;
+/* Apple card style */
+.apple-card {
+  background: #1c1c1e;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+  border: 1px solid rgba(84,84,88,0.3);
 }
 
-/* Subtle float animation for empty state arrow */
-@keyframes float-hint {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(-3px, -3px); }
-}
-.animate-float-hint {
-  animation: float-hint 2s ease-in-out infinite;
-}
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes blink-cursor { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes float-hint { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-3px, -3px); } }
+
+/* Utility classes for animations */
+.animate-error-pulse { animation: pulse-red 1.5s ease-in-out infinite; }
+.animate-blink { animation: blink-cursor 1s step-end infinite; }
+.animate-float-hint { animation: float-hint 2s ease-in-out infinite; }

@@ -88,7 +88,7 @@ function buildLayout(agents: Agent[], crons: CronJob[]): { nodes: Node[]; edges:
         source: agent.id,
         target: childId,
         animated: true,
-        style: { stroke: agent.color, strokeWidth: 1.5, opacity: 0.5 },
+        style: { stroke: agent.color, strokeWidth: 1, opacity: 0.3 },
       });
     }
   }
@@ -125,11 +125,16 @@ export function ManorMap({ agents, crons, onNodeClick }: ManorMapProps) {
       maxZoom={2}
       proOptions={{ hideAttribution: true }}
     >
-      <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#262632" />
+      <Background
+        variant={BackgroundVariant.Dots}
+        gap={24}
+        size={1}
+        color="rgba(84,84,88,0.3)"
+      />
       <Controls />
       <MiniMap
-        nodeColor={(n) => (n.data as unknown as Agent).color || "#3a3a4a"}
-        maskColor="rgba(10,10,15,0.8)"
+        nodeColor={(n) => (n.data as unknown as Agent).color || "rgba(84,84,88,0.4)"}
+        maskColor="rgba(0,0,0,0.8)"
       />
     </ReactFlow>
   );

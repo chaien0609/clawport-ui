@@ -4,10 +4,24 @@ import Link from "next/link";
 import type { Agent, ChatMessage } from "@/lib/types";
 
 function timeStr(ts: number) {
-  return new Date(ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  return new Date(ts).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
-export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
+function shouldShowAvatar(messages: ChatMessage[], index: number): boolean {
+  if (messages[index].role !== "assistant") return false;
+  if (index === 0) return true;
+  return messages[index - 1].role === "user";
+}
+
+export default function ChatPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const [agent, setAgent] = useState<Agent | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -42,13 +56,21 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
 
   async function sendMessage() {
     if (!input.trim() || isStreaming) return;
-    const userMsg: ChatMessage = { role: "user", content: input.trim(), timestamp: Date.now() };
+    const userMsg: ChatMessage = {
+      role: "user",
+      content: input.trim(),
+      timestamp: Date.now(),
+    };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
     setIsStreaming(true);
 
-    const assistantMsg: ChatMessage = { role: "assistant", content: "", timestamp: Date.now() };
+    const assistantMsg: ChatMessage = {
+      role: "assistant",
+      content: "",
+      timestamp: Date.now(),
+    };
     setMessages((prev) => [...prev, assistantMsg]);
 
     try {
@@ -79,12 +101,15 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
                   const msgs = [...prev];
                   msgs[msgs.length - 1] = {
                     ...msgs[msgs.length - 1],
-                    content: msgs[msgs.length - 1].content + chunk.content,
+                    content:
+                      msgs[msgs.length - 1].content + chunk.content,
                   };
                   return msgs;
                 });
               }
-            } catch {}
+            } catch {
+              /* skip malformed chunks */
+            }
           }
         }
       }
@@ -110,105 +135,265 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     }
   }
 
-  if (loading) return <div className="flex items-center justify-center h-full text-[#f5c518] text-sm animate-pulse">Connecting...</div>;
-  if (!agent) return <div className="flex items-center justify-center h-full text-[#86869b] text-sm">Agent not found. <Link href="/" className="text-[#f5c518] ml-1">← Back</Link></div>;
+  function clearChat() {
+    if (!agent) return;
+    setMessages([
+      {
+        role: "assistant",
+        content: `I'm ${agent.name}. ${agent.description} What do you need?`,
+        timestamp: Date.now(),
+      },
+    ]);
+  }
+
+  /* ─── Loading state ─── */
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full bg-black">
+        <span className="text-[15px] text-[#f5c518] animate-pulse">
+          Connecting...
+        </span>
+      </div>
+    );
+  }
+
+  /* ─── Not found state ─── */
+  if (!agent) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full bg-black gap-3">
+        <span className="text-[15px] text-[rgba(235,235,245,0.6)]">
+          Agent not found
+        </span>
+        <Link
+          href="/"
+          className="text-[15px] text-[#0a84ff] hover:underline"
+        >
+          &larr; Back to Agents
+        </Link>
+      </div>
+    );
+  }
+
+  const hasInput = input.trim().length > 0;
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0f]">
-      {/* Agent color stripe */}
-      <div className="h-0.5 w-full flex-shrink-0" style={{ backgroundColor: agent.color }} />
-      {/* Header */}
-      <div className="border-b border-[#262632] bg-[#0d0d14] px-5 py-3.5 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <Link href={`/agents/${agent.id}`} className="text-[#86869b] hover:text-white text-sm mr-1 transition-colors">←</Link>
-          <div className="w-0.5 h-6 rounded-full" style={{ backgroundColor: agent.color }} />
-          <span className="text-lg">{agent.emoji}</span>
-          <div>
-            <span className="font-bold text-white text-lg">{agent.name}</span>
-            <span className="text-[#86869b] text-xs ml-2">{agent.title}</span>
-          </div>
-          <div className="flex items-center gap-2 ml-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[10px] text-green-400 font-medium">live</span>
-          </div>
-          {agent.voiceId && (
-            <div className="flex items-center gap-1.5 ml-2 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-              <span className="text-[10px] text-purple-400 font-medium">Voice enabled</span>
-            </div>
-          )}
-        </div>
-        <button
-          onClick={() => {
-            setMessages([{ role: "assistant", content: `I'm ${agent.name}. ${agent.description} What do you need?`, timestamp: Date.now() }]);
-          }}
-          className="text-xs text-[#86869b] hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-[#1a1a24]"
+    <div className="flex flex-col h-full bg-black">
+      {/* ─── Color stripe ─── */}
+      <div
+        className="h-[3px] w-full flex-shrink-0"
+        style={{ backgroundColor: agent.color }}
+      />
+
+      {/* ─── Header ─── */}
+      <div
+        className="bg-[#1c1c1e] px-4 py-3 flex items-center justify-between flex-shrink-0"
+        style={{ boxShadow: "0 1px 0 rgba(84,84,88,0.4)" }}
+      >
+        {/* Left — back link */}
+        <Link
+          href="/"
+          className="text-[15px] text-[#0a84ff] hover:opacity-80 transition-opacity flex-shrink-0"
         >
-          🗑 Clear
+          &larr; Agents
+        </Link>
+
+        {/* Center — agent identity */}
+        <div className="flex flex-col items-center min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[17px]">{agent.emoji}</span>
+            <span className="text-[17px] font-semibold text-white truncate">
+              {agent.name}
+            </span>
+          </div>
+          <span className="text-[12px] text-[rgba(235,235,245,0.6)] truncate">
+            {agent.title}
+          </span>
+        </div>
+
+        {/* Right — clear button */}
+        <button
+          onClick={clearChat}
+          className="text-[rgba(235,235,245,0.4)] hover:text-white transition-colors text-[15px] flex-shrink-0"
+          title="Clear conversation"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3 5h14" />
+            <path d="M8 5V3.5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1V5" />
+            <path d="M5 5l1 12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-12" />
+            <path d="M8.5 9v5" />
+            <path d="M11.5 9v5" />
+          </svg>
         </button>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
-        {messages.map((msg, i) => (
-          <div key={i} className={`group flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div className="max-w-[75%]">
-              {msg.role === "assistant" && (
-                <div className="flex items-center gap-2 mb-1.5 ml-1">
-                  <span className="text-sm">{agent.emoji}</span>
-                  <span className="text-xs font-semibold text-[#86869b]">{agent.name}</span>
-                </div>
+      {/* ─── Messages ─── */}
+      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-1 bg-black">
+        {messages.map((msg, i) => {
+          const isUser = msg.role === "user";
+          const showAvatar = shouldShowAvatar(messages, i);
+          const isLastAssistant =
+            !isUser && i === messages.length - 1 && isStreaming;
+
+          return (
+            <div key={i} className="animate-fade-in">
+              {/* Extra spacing before first message in a group */}
+              {i > 0 && messages[i - 1].role !== msg.role && (
+                <div className="h-3" />
               )}
+
               <div
-                className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                  msg.role === "user"
-                    ? "bg-gradient-to-br from-[#f5c518] to-[#e8b800] text-black font-medium rounded-tr-sm"
-                    : "bg-white/[0.04] backdrop-blur-sm border border-white/[0.08] text-[#f5f5f7] rounded-tl-sm shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
+                className={`group flex items-end gap-2 ${
+                  isUser ? "justify-end" : "justify-start"
                 }`}
               >
-                {msg.content || (isStreaming && i === messages.length - 1 ? (
-                  <span className="text-[#f5c518] font-mono animate-blink">_</span>
-                ) : "")}
-              </div>
-              {/* Timestamp — show on hover */}
-              <div className={`text-[10px] text-[#86869b] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${msg.role === "user" ? "text-right" : "text-left ml-1"}`}>
-                {timeStr(msg.timestamp)}
+                {/* Assistant avatar */}
+                {!isUser && (
+                  <div className="w-[24px] flex-shrink-0 mb-0.5">
+                    {showAvatar ? (
+                      <div
+                        className="w-[24px] h-[24px] rounded-full flex items-center justify-center text-[12px]"
+                        style={{ backgroundColor: agent.color }}
+                      >
+                        {agent.emoji}
+                      </div>
+                    ) : (
+                      <div className="w-[24px]" />
+                    )}
+                  </div>
+                )}
+
+                {/* Bubble */}
+                <div className="max-w-[75%] flex flex-col">
+                  <div
+                    className={
+                      isUser
+                        ? "px-[14px] py-[10px] rounded-[20px] rounded-tr-[6px] text-[15px] font-medium text-black"
+                        : "px-[14px] py-[10px] rounded-[20px] rounded-tl-[6px] text-[15px] text-white"
+                    }
+                    style={
+                      isUser
+                        ? {
+                            background:
+                              "linear-gradient(135deg, #f5c518, #d4a800)",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+                          }
+                        : {
+                            backgroundColor: "#1c1c1e",
+                            border: "1px solid rgba(84,84,88,0.4)",
+                            boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+                          }
+                    }
+                  >
+                    {msg.content}
+                    {isLastAssistant && !msg.content && (
+                      <span className="text-[#f5c518] animate-blink">
+                        &#9612;
+                      </span>
+                    )}
+                    {isLastAssistant && msg.content && (
+                      <span className="text-[#f5c518] animate-blink ml-0.5">
+                        &#9612;
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Timestamp on hover */}
+                  <span
+                    className={`text-[11px] text-[rgba(235,235,245,0.4)] mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
+                      isUser ? "text-right mr-1" : "text-left ml-1"
+                    }`}
+                  >
+                    {timeStr(msg.timestamp)}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div className="border-t border-[#262632] bg-[#0d0d14] p-4 flex-shrink-0">
-        <div className="flex gap-3 items-end rounded-xl border border-[#262632] bg-[#13131a] transition-all duration-200 focus-within:ring-1 focus-within:ring-[#f5c518]/30 focus-within:border-[#f5c518]/30">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={`Message ${agent.name}...`}
-            rows={2}
-            disabled={isStreaming}
-            className="flex-1 bg-transparent px-4 py-3 text-sm text-white placeholder-[#86869b] resize-none focus:outline-none disabled:opacity-50"
-          />
-          <button
-            onClick={sendMessage}
-            disabled={isStreaming || !input.trim()}
-            style={{ backgroundColor: isStreaming || !input.trim() ? "transparent" : "#f5c518" }}
-            className="px-4 py-3 rounded-r-xl font-semibold text-sm transition-colors disabled:text-[#86869b] text-black h-[52px] flex-shrink-0 flex items-center gap-1.5"
+      {/* ─── Input area ─── */}
+      <div
+        className="bg-[#1c1c1e] px-4 pt-3 pb-2 flex-shrink-0"
+        style={{ boxShadow: "0 -1px 0 rgba(84,84,88,0.4)" }}
+      >
+        <div className="flex items-end gap-2">
+          {/* Input bubble */}
+          <div
+            className="flex-1 rounded-[20px] bg-[#2c2c2e] transition-colors duration-200"
+            style={{ border: "1px solid rgba(84,84,88,0.4)" }}
           >
-            {isStreaming ? (
-              <span className="inline-block w-4 h-4 border-2 border-[#86869b] border-t-transparent rounded-full animate-spin" />
-            ) : (
-              "Send"
-            )}
-          </button>
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={`Message ${agent.name}...`}
+              rows={1}
+              disabled={isStreaming}
+              className="w-full bg-transparent px-4 py-2.5 text-[15px] text-white placeholder-[rgba(235,235,245,0.4)] resize-none focus:outline-none disabled:opacity-50"
+              style={{
+                minHeight: "40px",
+                maxHeight: "120px",
+              }}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = "auto";
+                target.style.height =
+                  Math.min(target.scrollHeight, 120) + "px";
+              }}
+              onFocus={(e) => {
+                const parent = e.target.parentElement;
+                if (parent) {
+                  parent.style.borderColor = "rgba(245,197,24,0.5)";
+                }
+              }}
+              onBlur={(e) => {
+                const parent = e.target.parentElement;
+                if (parent) {
+                  parent.style.borderColor = "rgba(84,84,88,0.4)";
+                }
+              }}
+            />
+          </div>
+
+          {/* Send button — gold circle, only visible when there is input */}
+          <div
+            className="flex-shrink-0 mb-0.5 transition-all duration-200"
+            style={{
+              opacity: hasInput ? 1 : 0,
+              transform: hasInput ? "scale(1)" : "scale(0.6)",
+              pointerEvents: hasInput ? "auto" : "none",
+            }}
+          >
+            <button
+              onClick={sendMessage}
+              disabled={isStreaming || !hasInput}
+              className="w-[36px] h-[36px] rounded-full flex items-center justify-center text-black font-bold text-[18px] transition-all duration-150 active:scale-90 disabled:opacity-50"
+              style={{
+                background: "linear-gradient(135deg, #f5c518, #d4a800)",
+              }}
+              title="Send message"
+            >
+              &uarr;
+            </button>
+          </div>
         </div>
-        <div className="text-[10px] text-[#86869b]/50 mt-1.5 text-center">
-          ↵ Send · ⇧↵ New line
-        </div>
+
+        {/* Helper text */}
+        <p className="text-[11px] text-[rgba(235,235,245,0.3)] text-center mt-2 mb-0.5">
+          &#8629; Send &middot; &#8679;&#8629; New line
+        </p>
       </div>
     </div>
   );

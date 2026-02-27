@@ -22,56 +22,50 @@ export function NavLinks() {
 
   return (
     <nav className="flex-1 flex flex-col">
-      <div className="p-3 space-y-0.5">
-        <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#86869b]/60">
-          Navigation
+      <div className="px-2 py-3">
+        <div className="px-3 mb-1 text-[10px] font-semibold text-[rgba(235,235,245,0.3)] tracking-[0.08em]">
+          WORKSPACE
         </div>
-        {NAV_ITEMS.map((item) => {
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
+        <div className="space-y-0.5">
+          {NAV_ITEMS.map((item) => {
+            const isActive =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(item.href);
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`group relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150 ${
-                isActive
-                  ? "bg-[#f5c518]/[0.08] text-[#f5c518]"
-                  : "text-[#c8c8d4] hover:bg-[#1a1a24] hover:text-[#f5f5f7]"
-              }`}
-            >
-              {/* Gold left border for active */}
-              {isActive && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[#f5c518]" />
-              )}
-              <span className="w-[18px] h-[18px] flex items-center justify-center text-sm flex-shrink-0">
-                {item.icon}
-              </span>
-              <span className="font-medium">{item.label}</span>
-              {item.href === "/" && agentCount !== null && (
-                <span className="ml-auto text-[10px] font-mono text-[#86869b] bg-[#1a1a24] px-1.5 py-0.5 rounded">
-                  {agentCount}
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-2.5 px-3 py-[7px] rounded-lg transition-all duration-150 ${
+                  isActive
+                    ? "bg-[rgba(245,197,24,0.15)] text-[#f5c518] font-semibold"
+                    : "text-[rgba(235,235,245,0.6)] hover:bg-[rgba(120,120,128,0.16)] hover:text-white"
+                }`}
+              >
+                <span className="w-[18px] h-[18px] flex items-center justify-center text-sm flex-shrink-0">
+                  {item.icon}
                 </span>
-              )}
-            </Link>
-          );
-        })}
+                <span className="text-[13px] font-medium">{item.label}</span>
+                {item.href === "/" && agentCount !== null && (
+                  <span className="ml-auto text-[10px] font-mono text-[rgba(235,235,245,0.5)] bg-[#2c2c2e] px-1.5 py-0.5 rounded">
+                    {agentCount}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
       </div>
-
-      {/* Spacer */}
       <div className="flex-1" />
-
-      {/* User section */}
-      <div className="p-3 border-t border-[#262632]">
+      <div className="p-4 border-t border-[rgba(84,84,88,0.4)]">
         <div className="flex items-center gap-3 px-3 py-2">
-          <div className="w-8 h-8 rounded-full bg-[#262632] flex items-center justify-center text-xs font-semibold text-[#86869b] flex-shrink-0">
+          <div className="w-8 h-8 rounded-full bg-[#2c2c2e] flex items-center justify-center text-[13px] font-medium text-[rgba(235,235,245,0.6)] flex-shrink-0">
             JR
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-medium text-[#f5f5f7] truncate">John Rice</div>
-            <div className="text-[10px] text-[#86869b]">Owner</div>
+            <div className="text-[13px] font-medium text-white truncate">John Rice</div>
+            <div className="text-[11px] text-[rgba(235,235,245,0.5)]">Owner</div>
           </div>
         </div>
       </div>

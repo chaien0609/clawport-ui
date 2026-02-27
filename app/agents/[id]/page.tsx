@@ -16,8 +16,11 @@ function timeAgo(dateStr: string | null): string {
   return `${days}d ago`;
 }
 
-const statusColors = { ok: "text-green-400 bg-green-400/10", error: "text-red-400 bg-red-400/10", idle: "text-[#86869b] bg-[#86869b]/10" };
-const statusBorderColors = { ok: "border-l-green-500", error: "border-l-red-500", idle: "border-l-[#86869b]" };
+const statusColors: Record<string, string> = {
+  ok: "text-[#30d158] bg-[rgba(48,209,88,0.1)]",
+  error: "text-[#ff453a] bg-[rgba(255,69,58,0.1)]",
+  idle: "text-[rgba(235,235,245,0.5)] bg-[rgba(120,120,128,0.1)]",
+};
 
 const TOOL_ICONS: Record<string, string> = {
   web_search: "🔍",
@@ -32,17 +35,15 @@ const TOOL_ICONS: Record<string, string> = {
 function SoulViewer({ content }: { content: string }) {
   const lines = content.split("\n");
   return (
-    <div className="bg-[#0d0d14] rounded-lg max-h-96 overflow-y-auto flex">
-      {/* Line numbers gutter */}
-      <div className="flex-shrink-0 border-r border-[#262632] px-3 py-4 select-none">
+    <div className="bg-black rounded-apple max-h-96 overflow-y-auto flex">
+      <div className="flex-shrink-0 border-r border-[rgba(84,84,88,0.3)] px-3 py-4 select-none">
         {lines.map((_, i) => (
-          <div key={i} className="font-mono text-[10px] text-[#86869b]/40 leading-relaxed text-right min-w-[2ch]">
+          <div key={i} className="font-mono text-[11px] text-[rgba(235,235,245,0.2)] leading-relaxed text-right min-w-[2ch]">
             {i + 1}
           </div>
         ))}
       </div>
-      {/* Content */}
-      <pre className="font-mono text-xs text-[#c8c8d4] whitespace-pre-wrap leading-relaxed p-4 flex-1">
+      <pre className="font-mono text-[12px] text-[rgba(235,235,245,0.7)] whitespace-pre-wrap leading-relaxed p-4 flex-1">
         {content}
       </pre>
     </div>
@@ -67,67 +68,63 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <div className="flex items-center justify-center h-full text-[#f5c518] text-sm animate-pulse">Loading agent...</div>;
-  if (!agent) return <div className="flex items-center justify-center h-full text-[#86869b] text-sm">Agent not found. <Link href="/" className="text-[#f5c518] ml-1">← Back</Link></div>;
+  if (loading) return <div className="flex items-center justify-center h-full text-[#f5c518] text-[15px] animate-pulse">Loading agent...</div>;
+  if (!agent) return <div className="flex items-center justify-center h-full text-[rgba(235,235,245,0.6)] text-[15px]">Agent not found. <Link href="/" className="text-[#0a84ff] ml-1">← Back</Link></div>;
 
   const parent = agent.reportsTo ? allAgents.find((a) => a.id === agent.reportsTo) : null;
   const children = agent.directReports.map((cid) => allAgents.find((a) => a.id === cid)).filter(Boolean) as Agent[];
 
   return (
-    <div className="h-full overflow-y-auto bg-[#0a0a0f]">
-      {/* Header with top gradient glow */}
+    <div className="h-full overflow-y-auto bg-black">
+      {/* Header */}
       <div
-        className="sticky top-0 z-10 border-b border-[#262632] bg-[#0d0d14] px-6 py-4 flex items-center justify-between"
+        className="sticky top-0 z-10 bg-[#1c1c1e] px-6 py-4 flex items-center justify-between"
         style={{
           borderTop: `3px solid ${agent.color}`,
-          boxShadow: `0 4px 24px ${agent.color}15`,
+          boxShadow: "0 1px 0 rgba(84,84,88,0.4)",
         }}
       >
         <div className="flex items-center gap-4">
-          <Link href="/" className="text-[#86869b] hover:text-white text-sm transition-colors">← Map</Link>
+          <Link href="/" className="text-[#0a84ff] hover:opacity-80 text-[15px] transition-opacity">← Map</Link>
           <div className="flex items-center gap-3">
-            <span className="text-2xl">{agent.emoji}</span>
+            <span className="text-[28px]">{agent.emoji}</span>
             <div>
-              <span className="font-bold text-white text-lg">{agent.name}</span>
-              <div className="text-[#86869b] text-xs">{agent.title}</div>
+              <span className="font-bold text-white text-[20px] tracking-tight">{agent.name}</span>
+              <div className="text-[rgba(235,235,245,0.6)] text-[13px]">{agent.title}</div>
             </div>
           </div>
         </div>
         <button
           onClick={() => router.push(`/chat/${agent.id}`)}
-          className="font-semibold text-sm px-5 py-2 rounded-lg transition-colors text-black"
-          style={{
-            background: `linear-gradient(135deg, ${agent.color}, #f5c518)`,
-          }}
+          className="bg-[#f5c518] text-black font-semibold text-[15px] px-5 py-2.5 rounded-xl hover:bg-[#e8b800] transition-colors"
         >
-          💬 Talk to {agent.name}
+          Open Chat
         </button>
       </div>
 
       <div className="grid grid-cols-3 gap-5 p-6">
         {/* Left column */}
         <div className="col-span-1 space-y-4">
-          {/* Identity */}
-          <div className="relative bg-[#13131a] border border-[#262632] rounded-xl p-4 overflow-hidden">
-            {/* Watermark emoji */}
+          {/* About */}
+          <div className="relative bg-[#1c1c1e] border border-[rgba(84,84,88,0.3)] rounded-apple-lg p-4 overflow-hidden" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)" }}>
             <span
-              className="absolute -bottom-2 -right-1 text-[48px] opacity-[0.06] select-none pointer-events-none"
+              className="absolute -bottom-2 -right-1 text-[48px] opacity-[0.04] select-none pointer-events-none"
               aria-hidden="true"
             >
               {agent.emoji}
             </span>
-            <div className="text-[10px] font-semibold text-[#86869b] uppercase tracking-widest mb-2">About</div>
-            <p className="text-sm text-[#c8c8d4] leading-relaxed relative">{agent.description}</p>
+            <div className="text-[10px] font-semibold text-[rgba(235,235,245,0.3)] uppercase tracking-[0.08em] mb-2">About</div>
+            <p className="text-[14px] text-[rgba(235,235,245,0.7)] leading-[1.6] relative">{agent.description}</p>
           </div>
 
-          {/* Tools — 2-column grid */}
-          <div className="bg-[#13131a] border border-[#262632] rounded-xl p-4">
-            <div className="text-[10px] font-semibold text-[#86869b] uppercase tracking-widest mb-2.5">Tools</div>
+          {/* Tools */}
+          <div className="bg-[#1c1c1e] border border-[rgba(84,84,88,0.3)] rounded-apple-lg p-4" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)" }}>
+            <div className="text-[10px] font-semibold text-[rgba(235,235,245,0.3)] uppercase tracking-[0.08em] mb-2.5">Tools</div>
             <div className="grid grid-cols-2 gap-1.5">
               {agent.tools.map((t) => (
                 <span
                   key={t}
-                  className="inline-flex items-center gap-1.5 text-xs font-mono tracking-tight bg-[#1a1a24] border border-[#262632] text-[#c8c8d4] px-2 py-1 rounded-lg"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-mono bg-[rgba(120,120,128,0.2)] text-[rgba(235,235,245,0.7)] px-2.5 py-1 rounded-full"
                 >
                   {TOOL_ICONS[t] && <span className="text-[10px]">{TOOL_ICONS[t]}</span>}
                   {t}
@@ -137,38 +134,38 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* Voice */}
-          <div className="bg-[#13131a] border border-[#262632] rounded-xl p-4">
-            <div className="text-[10px] font-semibold text-[#86869b] uppercase tracking-widest mb-2">Voice</div>
+          <div className="bg-[#1c1c1e] border border-[rgba(84,84,88,0.3)] rounded-apple-lg p-4" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)" }}>
+            <div className="text-[10px] font-semibold text-[rgba(235,235,245,0.3)] uppercase tracking-[0.08em] mb-2">Voice</div>
             {agent.voiceId ? (
               <div>
-                <span className="inline-block bg-purple-500/10 text-purple-400 text-xs px-2 py-0.5 rounded-full border border-purple-500/20 mb-1">ElevenLabs</span>
-                <div className="font-mono text-[10px] text-[#86869b] mt-1 break-all">{agent.voiceId}</div>
+                <span className="inline-block bg-[rgba(191,90,242,0.1)] text-[#bf5af2] text-[12px] px-2.5 py-0.5 rounded-full border border-[rgba(191,90,242,0.2)] mb-1">ElevenLabs</span>
+                <div className="font-mono text-[11px] text-[rgba(235,235,245,0.4)] mt-1 break-all">{agent.voiceId}</div>
               </div>
             ) : (
-              <span className="text-xs text-[#86869b]">No voice configured</span>
+              <span className="text-[13px] text-[rgba(235,235,245,0.5)]">No voice configured</span>
             )}
           </div>
 
           {/* Hierarchy */}
-          <div className="bg-[#13131a] border border-[#262632] rounded-xl p-4">
-            <div className="text-[10px] font-semibold text-[#86869b] uppercase tracking-widest mb-2">Hierarchy</div>
+          <div className="bg-[#1c1c1e] border border-[rgba(84,84,88,0.3)] rounded-apple-lg p-4" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)" }}>
+            <div className="text-[10px] font-semibold text-[rgba(235,235,245,0.3)] uppercase tracking-[0.08em] mb-2">Hierarchy</div>
             {parent && (
               <div className="mb-3">
-                <div className="text-[10px] text-[#86869b] mb-1">Reports to</div>
-                <Link href={`/agents/${parent.id}`} className="flex items-center gap-2 text-sm hover:text-[#f5c518] transition-colors">
+                <div className="text-[11px] text-[rgba(235,235,245,0.4)] mb-1">Reports to</div>
+                <Link href={`/agents/${parent.id}`} className="flex items-center gap-2 text-[14px] text-white hover:text-[#0a84ff] transition-colors">
                   <span>{parent.emoji}</span>
-                  <span>{parent.name}</span>
+                  <span className="font-medium">{parent.name}</span>
                 </Link>
               </div>
             )}
             {children.length > 0 && (
               <div>
-                <div className="text-[10px] text-[#86869b] mb-1">Direct reports ({children.length})</div>
+                <div className="text-[11px] text-[rgba(235,235,245,0.4)] mb-1">Direct reports ({children.length})</div>
                 <div className="space-y-1">
                   {children.map((c) => (
-                    <Link key={c.id} href={`/agents/${c.id}`} className="flex items-center gap-2 text-sm hover:text-[#f5c518] transition-colors">
+                    <Link key={c.id} href={`/agents/${c.id}`} className="flex items-center gap-2 text-[14px] text-white hover:text-[#0a84ff] transition-colors">
                       <span>{c.emoji}</span>
-                      <span>{c.name}</span>
+                      <span className="font-medium">{c.name}</span>
                     </Link>
                   ))}
                 </div>
@@ -181,42 +178,34 @@ export default function AgentDetailPage({ params }: { params: Promise<{ id: stri
         <div className="col-span-2 space-y-4">
           {/* SOUL.md */}
           {agent.soul && (
-            <div className="bg-[#13131a] border border-[#262632] rounded-xl p-4">
-              <div className="text-[10px] font-semibold text-[#86869b] uppercase tracking-widest mb-3">SOUL.md</div>
+            <div className="bg-[#1c1c1e] border border-[rgba(84,84,88,0.3)] rounded-apple-lg p-4" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)" }}>
+              <div className="text-[10px] font-semibold text-[rgba(235,235,245,0.3)] uppercase tracking-[0.08em] mb-3">SOUL.md</div>
               <SoulViewer content={agent.soul} />
             </div>
           )}
 
           {/* Crons */}
-          <div className="bg-[#13131a] border border-[#262632] rounded-xl p-4">
-            <div className="text-[10px] font-semibold text-[#86869b] uppercase tracking-widest mb-3">
+          <div className="bg-[#1c1c1e] border border-[rgba(84,84,88,0.3)] rounded-apple-lg p-4" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)" }}>
+            <div className="text-[10px] font-semibold text-[rgba(235,235,245,0.3)] uppercase tracking-[0.08em] mb-3">
               Associated Crons {crons.length > 0 && `(${crons.length})`}
             </div>
             {crons.length === 0 ? (
-              <div className="text-xs text-[#86869b]">No crons associated with this agent</div>
+              <div className="text-[13px] text-[rgba(235,235,245,0.5)]">No crons associated with this agent</div>
             ) : (
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-[#86869b] border-b border-[#262632]">
-                    <th className="text-left pb-2 font-normal">Name</th>
-                    <th className="text-left pb-2 font-normal">Schedule</th>
-                    <th className="text-left pb-2 font-normal">Status</th>
-                    <th className="text-left pb-2 font-normal">Next Run</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#262632]">
-                  {crons.map((c) => (
-                    <tr key={c.id} className={`border-l-[3px] ${statusBorderColors[c.status]}`}>
-                      <td className="py-2 pl-3 font-mono text-[#c8c8d4] pr-3">{c.name}</td>
-                      <td className="py-2 font-mono text-[#86869b] pr-3">{c.schedule}</td>
-                      <td className="py-2 pr-3">
-                        <span className={`px-1.5 py-0.5 rounded-full text-xs ${statusColors[c.status]}`}>{c.status}</span>
-                      </td>
-                      <td className="py-2 text-[#86869b]">{timeAgo(c.nextRun)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="rounded-apple overflow-hidden">
+                {crons.map((c, i) => (
+                  <div
+                    key={c.id}
+                    className={`flex items-center px-4 py-3 ${i < crons.length - 1 ? "border-b border-[rgba(84,84,88,0.3)]" : ""} ${c.status === "error" ? "bg-[rgba(255,69,58,0.06)]" : ""}`}
+                  >
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${c.status === "ok" ? "bg-[#30d158]" : c.status === "error" ? "bg-[#ff453a] animate-error-pulse" : "bg-[rgba(235,235,245,0.3)]"}`} />
+                    <span className="text-[14px] font-mono text-white ml-3">{c.name}</span>
+                    <span className="ml-auto text-[12px] font-mono text-[rgba(235,235,245,0.5)]">{c.schedule}</span>
+                    <span className={`ml-3 px-2 py-0.5 rounded-full text-[11px] ${statusColors[c.status]}`}>{c.status}</span>
+                    <span className="ml-3 text-[12px] text-[rgba(235,235,245,0.4)]">{timeAgo(c.nextRun)}</span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

@@ -6,7 +6,7 @@ import type { Agent, CronJob } from "@/lib/types";
 function timeAgo(dateStr: string | null): string {
   if (!dateStr) return "never";
   const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "—";
+  if (isNaN(d.getTime())) return "\u2014";
   const diff = Date.now() - d.getTime();
   const mins = Math.floor(diff / 60000);
   const hrs = Math.floor(diff / 3600000);
@@ -26,14 +26,6 @@ function timeAgo(dateStr: string | null): string {
   return `${days}d ago`;
 }
 
-function getScheduleColor(schedule: string): string {
-  const s = schedule.toLowerCase();
-  if (s.includes("day") && !s.includes("days")) return "text-blue-400";
-  if (s.includes("week")) return "text-purple-400";
-  if (/every\s+\d+\s*day/i.test(s) || /\d+d/i.test(s)) return "text-orange-400";
-  return "text-[#86869b]";
-}
-
 type Filter = "all" | "ok" | "error" | "idle";
 
 export default function CronsPage() {
@@ -45,14 +37,15 @@ export default function CronsPage() {
   const [loading, setLoading] = useState(true);
 
   function refresh() {
-    Promise.all([fetch("/api/crons").then((r) => r.json()), fetch("/api/agents").then((r) => r.json())]).then(
-      ([c, a]) => {
-        setCrons(c);
-        setAgents(a);
-        setLastRefresh(new Date());
-        setLoading(false);
-      }
-    );
+    Promise.all([
+      fetch("/api/crons").then((r) => r.json()),
+      fetch("/api/agents").then((r) => r.json()),
+    ]).then(([c, a]) => {
+      setCrons(c);
+      setAgents(a);
+      setLastRefresh(new Date());
+      setLoading(false);
+    });
   }
 
   useEffect(() => {
@@ -65,145 +58,190 @@ export default function CronsPage() {
   const statusOrder: Record<string, number> = { error: 0, idle: 1, ok: 2 };
   const filtered = crons
     .filter((c) => filter === "all" || c.status === filter)
-    .sort((a, b) => (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9));
-  const counts = { ok: crons.filter((c) => c.status === "ok").length, error: crons.filter((c) => c.status === "error").length, idle: crons.filter((c) => c.status === "idle").length };
-
-  const statusConfig = {
-    ok: { color: "bg-green-500", label: "ok" },
-    error: { color: "bg-red-500 animate-error-pulse", label: "error" },
-    idle: { color: "bg-[#86869b]", label: "idle" },
+    .sort(
+      (a, b) => (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9)
+    );
+  const counts = {
+    all: crons.length,
+    ok: crons.filter((c) => c.status === "ok").length,
+    error: crons.filter((c) => c.status === "error").length,
+    idle: crons.filter((c) => c.status === "idle").length,
   };
 
-  const statusBorderColors = { ok: "border-l-green-500", error: "border-l-red-500", idle: "border-l-[#86869b]" };
+  const pills: { key: Filter; label: string; dotColor: string }[] = [
+    { key: "all", label: "All", dotColor: "bg-white" },
+    { key: "ok", label: "Passing", dotColor: "bg-[#30d158]" },
+    { key: "error", label: "Errors", dotColor: "bg-[#ff453a]" },
+    { key: "idle", label: "Idle", dotColor: "bg-[rgba(235,235,245,0.3)]" },
+  ];
 
   return (
-    <div className="h-full flex flex-col bg-[#0a0a0f] overflow-hidden">
+    <div className="h-full flex flex-col bg-[#000000] overflow-hidden">
       {/* Header */}
-      <div className="border-b border-[#262632] bg-[#0d0d14] px-6 py-4 flex items-center justify-between flex-shrink-0">
+      <div
+        className="sticky top-0 z-10 bg-[#1c1c1e] backdrop-blur px-6 py-4 flex items-center justify-between flex-shrink-0"
+        style={{ boxShadow: "0 1px 0 rgba(84,84,88,0.4)" }}
+      >
         <div className="flex items-center gap-3">
-          <h1 className="font-bold text-white">⏰ Cron Monitor</h1>
-          <span className="bg-[#1a1a24] border border-[#262632] text-[#86869b] text-xs font-mono px-2 py-0.5 rounded-full">{crons.length}</span>
+          <h1 className="text-[20px] font-semibold text-white">Cron Monitor</h1>
+          <span className="bg-[rgba(120,120,128,0.2)] text-[rgba(235,235,245,0.6)] text-[12px] font-mono rounded-full px-2 py-0.5">
+            {crons.length}
+          </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-[#86869b]">Updated {timeAgo(lastRefresh.toISOString())}</span>
-          <button onClick={refresh} className="text-xs text-[#86869b] hover:text-white px-3 py-1.5 rounded-lg hover:bg-[#1a1a24] transition-colors">↻ Refresh</button>
-        </div>
-      </div>
-
-      {/* Summary — clickable counts */}
-      <div className="px-6 py-3 border-b border-[#262632] flex items-center gap-6 flex-shrink-0">
-        <button
-          onClick={() => setFilter(counts.ok > 0 ? "ok" : "all")}
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-        >
-          <span className="w-2 h-2 rounded-full bg-green-500" />
-          <span className="text-sm font-medium text-white">{counts.ok}</span>
-          <span className="text-xs text-[#86869b]">ok</span>
-        </button>
-        <button
-          onClick={() => setFilter(counts.error > 0 ? "error" : "all")}
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-        >
-          <span className="w-2 h-2 rounded-full bg-red-500 animate-error-pulse" />
-          <span className="text-sm font-medium text-white">{counts.error}</span>
-          <span className="text-xs text-[#86869b]">errors</span>
-        </button>
-        <button
-          onClick={() => setFilter(counts.idle > 0 ? "idle" : "all")}
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-        >
-          <span className="w-2 h-2 rounded-full bg-[#86869b]" />
-          <span className="text-sm font-medium text-white">{counts.idle}</span>
-          <span className="text-xs text-[#86869b]">idle</span>
-        </button>
-      </div>
-
-      {/* Filter tabs */}
-      <div className="px-6 py-2 border-b border-[#262632] flex gap-1 flex-shrink-0">
-        {(["all", "ok", "error", "idle"] as Filter[]).map((f) => (
+          <span className="text-[12px] text-[rgba(235,235,245,0.4)]">
+            Updated {timeAgo(lastRefresh.toISOString())}
+          </span>
           <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${
-              filter === f ? "bg-[#f5c518] text-black" : "text-[#86869b] hover:text-white hover:bg-[#1a1a24]"
-            }`}
+            onClick={refresh}
+            className="text-[rgba(235,235,245,0.4)] hover:text-white transition-colors text-[16px]"
           >
-            {f} {f !== "all" && counts[f as keyof typeof counts] > 0 && `(${counts[f as keyof typeof counts]})`}
+            &#8635;
           </button>
-        ))}
+        </div>
       </div>
 
-      {/* Table */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Summary pills */}
+      <div className="px-6 py-3 flex items-center gap-2 overflow-x-auto flex-shrink-0">
+        {pills.map((pill) => {
+          const isActive = filter === pill.key;
+          return (
+            <button
+              key={pill.key}
+              onClick={() => setFilter(pill.key)}
+              className={`flex items-center gap-2 rounded-full px-3 py-1.5 transition-all flex-shrink-0 ${
+                isActive
+                  ? "ring-1 ring-[#f5c518] bg-[rgba(245,197,24,0.1)]"
+                  : "bg-[#2c2c2e] hover:bg-[rgba(120,120,128,0.2)]"
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${pill.dotColor} ${
+                  pill.key === "error" && counts.error > 0
+                    ? "animate-error-pulse"
+                    : ""
+                }`}
+              />
+              <span className="text-[13px] font-semibold text-white">
+                {counts[pill.key]}
+              </span>
+              <span className="text-[12px] text-[rgba(235,235,245,0.6)]">
+                {pill.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Cron list */}
+      <div className="flex-1 overflow-y-auto px-4 pb-6">
         {loading ? (
-          <div className="flex items-center justify-center h-32 text-[#f5c518] text-sm animate-pulse">Loading crons...</div>
+          <div className="flex items-center justify-center h-32 text-[#f5c518] text-sm animate-pulse">
+            Loading crons...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex items-center justify-center h-32 text-[15px] text-[rgba(235,235,245,0.5)]">
+            No crons match this filter
+          </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-[#0d0d14] border-b border-[#262632]">
-              <tr className="text-[#86869b] text-xs">
-                <th className="text-left px-6 py-3 font-normal w-8"></th>
-                <th className="text-left px-3 py-3 font-normal">Name</th>
-                <th className="text-left px-3 py-3 font-normal">Agent</th>
-                <th className="text-left px-3 py-3 font-normal">Schedule</th>
-                <th className="text-left px-3 py-3 font-normal">Last Run</th>
-                <th className="text-left px-3 py-3 font-normal">Next Run</th>
-                <th className="w-6"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#262632]">
-              {filtered.map((cron) => {
-                const agent = cron.agentId ? agentMap.get(cron.agentId) : null;
-                const sc = statusConfig[cron.status];
-                const isExpanded = expanded === cron.id;
-                return (
-                  <tbody key={cron.id}>
-                    <tr
-                      onClick={() => setExpanded(isExpanded ? null : cron.id)}
-                      className={`group hover:bg-[#13131a] cursor-pointer transition-colors border-l-[3px] ${statusBorderColors[cron.status]}`}
+          <div className="bg-[#1c1c1e] rounded-xl overflow-hidden">
+            {filtered.map((cron, idx) => {
+              const agent = cron.agentId ? agentMap.get(cron.agentId) : null;
+              const isExpanded = expanded === cron.id;
+              const isError = cron.status === "error";
+              const isLast = idx === filtered.length - 1;
+
+              const dotColor =
+                cron.status === "ok"
+                  ? "bg-[#30d158]"
+                  : cron.status === "error"
+                  ? "bg-[#ff453a] animate-error-pulse"
+                  : "bg-[rgba(235,235,245,0.3)]";
+
+              return (
+                <div key={cron.id}>
+                  {/* Row */}
+                  <div
+                    onClick={() => setExpanded(isExpanded ? null : cron.id)}
+                    className={`flex items-center px-4 py-3 cursor-pointer transition-colors ${
+                      isError
+                        ? "bg-[rgba(255,69,58,0.06)] hover:bg-[rgba(255,69,58,0.1)]"
+                        : "hover:bg-[rgba(120,120,128,0.12)]"
+                    } ${!isLast && !isExpanded ? "border-b border-[rgba(84,84,88,0.3)]" : ""}`}
+                  >
+                    {/* Status dot */}
+                    <span
+                      className={`w-2 h-2 rounded-full flex-shrink-0 ${dotColor}`}
+                    />
+
+                    {/* Name */}
+                    <span className="text-[14px] font-medium text-white ml-3 truncate">
+                      {cron.name}
+                    </span>
+
+                    {/* Agent link pushed right */}
+                    <div className="ml-auto flex items-center gap-3 flex-shrink-0">
+                      {agent ? (
+                        <Link
+                          href={`/agents/${agent.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-[12px] text-[#0a84ff] hover:underline transition-colors"
+                        >
+                          {agent.name}
+                        </Link>
+                      ) : (
+                        <span className="text-[12px] text-[rgba(235,235,245,0.3)]">
+                          \u2014
+                        </span>
+                      )}
+
+                      {/* Schedule */}
+                      <span className="text-[12px] font-mono text-[rgba(235,235,245,0.5)]">
+                        {cron.schedule}
+                      </span>
+
+                      {/* Chevron */}
+                      <span
+                        className={`text-[14px] text-[rgba(235,235,245,0.3)] transition-transform ${
+                          isExpanded ? "rotate-90" : ""
+                        }`}
+                      >
+                        &#8250;
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Expanded detail */}
+                  {isExpanded && (
+                    <div
+                      className={`${
+                        !isLast ? "border-b border-[rgba(84,84,88,0.3)]" : ""
+                      }`}
                     >
-                      <td className="px-6 py-3">
-                        <span className={`inline-block w-2 h-2 rounded-full ${sc.color}`} />
-                      </td>
-                      <td className="px-3 py-3 font-mono text-xs text-[#c8c8d4]">{cron.name}</td>
-                      <td className="px-3 py-3">
-                        {agent ? (
-                          <Link
-                            href={`/agents/${agent.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-1.5 text-xs hover:text-[#f5c518] transition-colors w-fit"
-                          >
-                            <span>{agent.emoji}</span>
-                            <span className="font-medium">{agent.name}</span>
-                          </Link>
-                        ) : (
-                          <span className="text-xs text-[#86869b]">—</span>
-                        )}
-                      </td>
-                      <td className={`px-3 py-3 font-mono text-xs ${getScheduleColor(cron.schedule)}`}>{cron.schedule}</td>
-                      <td className="px-3 py-3 text-xs text-[#86869b]">{timeAgo(cron.lastRun)}</td>
-                      <td className="px-3 py-3 text-xs text-[#86869b]">{timeAgo(cron.nextRun)}</td>
-                      <td className="pr-4 py-3 text-[#86869b] opacity-0 group-hover:opacity-100 transition-opacity text-xs">
-                        ›
-                      </td>
-                    </tr>
-                    {isExpanded && (
-                      <tr className={cron.status === "error" ? "bg-[#1a0a0a]" : "bg-[#0d0d14]"}>
-                        <td colSpan={7} className="px-6 py-3">
-                          {cron.lastError && (
-                            <div className="mb-2">
-                              <span className="text-xs font-semibold text-red-400">Error: </span>
-                              <span className="text-xs text-red-300 font-mono">{cron.lastError}</span>
-                            </div>
-                          )}
-                          <div className="text-xs text-[#86869b] font-mono">ID: {cron.id}</div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                );
-              })}
-            </tbody>
-          </table>
+                      {cron.lastError && (
+                        <div className="mx-4 my-3 bg-[rgba(255,69,58,0.06)] border-l-2 border-[#ff453a] px-4 py-3 rounded-r-lg">
+                          <pre className="text-[13px] font-mono text-[#ff453a] whitespace-pre-wrap">
+                            {cron.lastError}
+                          </pre>
+                        </div>
+                      )}
+                      <div className="px-4 py-3 flex flex-wrap gap-x-6 gap-y-1">
+                        <span className="text-[12px] text-[rgba(235,235,245,0.4)]">
+                          Last run: {timeAgo(cron.lastRun)}
+                        </span>
+                        <span className="text-[12px] text-[rgba(235,235,245,0.4)]">
+                          Next run: {timeAgo(cron.nextRun)}
+                        </span>
+                        <span className="text-[12px] text-[rgba(235,235,245,0.4)] font-mono">
+                          ID: {cron.id}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
