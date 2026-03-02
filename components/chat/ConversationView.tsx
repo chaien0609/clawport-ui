@@ -7,6 +7,7 @@ import { parseMedia, addMessage, updateLastMessage } from '@/lib/conversations'
 import { buildApiContent } from '@/lib/multimodal'
 import { createAudioRecorder, formatDuration, blobToDataUrl, estimateStorageSize } from '@/lib/audio-recorder'
 import type { AudioRecorderHandle } from '@/lib/audio-recorder'
+import { transcribe } from '@/lib/transcribe'
 import { VoiceMessage } from './VoiceMessage'
 import { FileAttachment } from './FileAttachment'
 import { MediaPreview } from './MediaPreview'
@@ -525,24 +526,16 @@ export function ConversationView({ agent, conversation, onUpdate, onBack }: Conv
           size: estimateStorageSize(result.dataUrl),
         }
 
-        // Transcribe audio via Whisper
+        // Transcribe audio via Whisper (with fallback handling)
         setIsTranscribing(true)
-        let transcript = ''
-        try {
-          const form = new FormData()
-          form.append('audio', result.audioBlob, 'voice.webm')
-          const res = await fetch('/api/transcribe', { method: 'POST', body: form })
-          if (res.ok) {
-            const data = await res.json()
-            transcript = data.text || ''
-          }
-        } catch {
-          // Transcription failed — send without transcript
-        }
+        const transcription = await transcribe(result.audioBlob)
         setIsTranscribing(false)
 
-        // Send with transcript as content (agent sees text), waveform bubble for UI
-        sendMessage([voiceAttachment], transcript || undefined)
+        // Send with transcript as content — if transcription failed, include
+        // a clear fallback so the agent knows a voice message was sent
+        const messageContent = transcription.text
+          || '[Voice message — transcription unavailable. Please ask the user to type their message.]'
+        sendMessage([voiceAttachment], messageContent)
       } catch {
         setIsRecording(false)
         setIsTranscribing(false)

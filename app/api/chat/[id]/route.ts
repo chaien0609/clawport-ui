@@ -2,6 +2,7 @@ export const runtime = 'nodejs'
 
 import { getAgent } from '@/lib/agents'
 import { validateChatMessages } from '@/lib/validation'
+import { hasImageContent, extractImageAttachments, buildTextPrompt, sendViaOpenClaw } from '@/lib/anthropic'
 import OpenAI from 'openai'
 
 // Route through the OpenClaw gateway — no separate API key needed
@@ -9,6 +10,9 @@ const openai = new OpenAI({
   baseURL: 'http://localhost:18789/v1',
   apiKey: process.env.OPENCLAW_GATEWAY_TOKEN,
 })
+
+const OPENCLAW_BIN = process.env.OPENCLAW_BIN || 'openclaw'
+const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN || ''
 
 export async function POST(
   request: Request,
@@ -48,6 +52,39 @@ export async function POST(
     ? `${agent.soul}\n\nYou are speaking directly with John, your operator. Stay fully in character. Be concise — this is a live chat. 2-4 sentences unless detail is asked for. No em dashes.`
     : `You are ${agent.name}, ${agent.title}. Respond in character. Be concise. No em dashes.`
 
+  // When messages contain images, use the OpenClaw gateway's chat.send pipeline
+  // (same path Discord/Telegram use) — supports image attachments natively.
+  if (hasImageContent(messages) && GATEWAY_TOKEN) {
+    const attachments = extractImageAttachments(messages)
+    const textPrompt = buildTextPrompt(systemPrompt, messages)
+
+    const response = await sendViaOpenClaw({
+      openclawBin: OPENCLAW_BIN,
+      gatewayToken: GATEWAY_TOKEN,
+      message: textPrompt,
+      attachments,
+    })
+
+    // Return as a non-streaming SSE response (complete text at once)
+    const encoder = new TextEncoder()
+    const content = response || 'I had trouble processing that image. Could you try again or describe what you see?'
+    const streamBody = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`))
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+        controller.close()
+      },
+    })
+
+    return new Response(streamBody, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      },
+    })
+  }
+
   try {
     const stream = await openai.chat.completions.create({
       model: 'claude-sonnet-4-6',
@@ -58,7 +95,7 @@ export async function POST(
       ] as OpenAI.ChatCompletionMessageParam[],
     })
 
-    const body = new ReadableStream({
+    const streamBody = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder()
         try {
@@ -80,7 +117,7 @@ export async function POST(
       },
     })
 
-    return new Response(body, {
+    return new Response(streamBody, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
