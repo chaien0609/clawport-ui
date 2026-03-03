@@ -5,10 +5,6 @@ import type { Agent } from '@/lib/types'
 import type { Conversation, ConversationStore, Message, MediaAttachment } from '@/lib/conversations'
 import { parseMedia, addMessage, updateLastMessage } from '@/lib/conversations'
 import { buildApiContent } from '@/lib/multimodal'
-import { createAudioRecorder, formatDuration, blobToDataUrl, estimateStorageSize } from '@/lib/audio-recorder'
-import type { AudioRecorderHandle } from '@/lib/audio-recorder'
-import { transcribe } from '@/lib/transcribe'
-import { VoiceMessage } from './VoiceMessage'
 import { FileAttachment } from './FileAttachment'
 import { MediaPreview } from './MediaPreview'
 import { AgentAvatar } from '@/components/AgentAvatar'
@@ -252,8 +248,6 @@ function resizeImage(file: File, maxPx: number): Promise<string> {
 
 function renderMedia(media: MediaAttachment[], isUser: boolean) {
   const images = media.filter(m => m.type === 'image')
-  const voiceMessages = media.filter(m => m.type === 'audio' && m.waveform && m.waveform.length > 0)
-  const plainAudio = media.filter(m => m.type === 'audio' && !(m.waveform && m.waveform.length > 0))
   const files = media.filter(m => m.type === 'file')
 
   return (
@@ -271,35 +265,6 @@ function renderMedia(media: MediaAttachment[], isUser: boolean) {
             style={{ width: '100%', display: 'block', borderRadius: 'var(--radius-lg)', cursor: 'pointer' }}
             onClick={() => window.open(m.url, '_blank')}
           />
-        </div>
-      ))}
-      {voiceMessages.map((m, mi) => (
-        <div key={`voice-${mi}`} style={{ marginTop: 'var(--space-2)' }}>
-          <VoiceMessage
-            src={m.url}
-            duration={m.duration || 0}
-            waveform={m.waveform || []}
-            isUser={isUser}
-          />
-        </div>
-      ))}
-      {plainAudio.map((m, mi) => (
-        <div key={`audio-${mi}`} style={{
-          marginTop: 'var(--space-2)',
-          background: isUser ? 'var(--accent)' : 'var(--material-thin)',
-          border: isUser ? 'none' : '1px solid var(--separator)',
-          borderRadius: 'var(--radius-lg)',
-          padding: 'var(--space-3) var(--space-4)',
-          maxWidth: 280,
-        }}>
-          <div style={{
-            fontSize: 'var(--text-caption2)',
-            color: isUser ? 'rgba(0,0,0,0.5)' : 'var(--text-tertiary)',
-            marginBottom: 'var(--space-2)',
-          }}>
-            {m.name || 'Audio'}
-          </div>
-          <audio controls src={m.url} style={{ width: '100%', height: 32 }} />
         </div>
       ))}
       {files.map((m, mi) => (
@@ -324,16 +289,11 @@ export function ConversationView({ agent, conversation, onUpdate, onBack }: Conv
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [pendingAttachments, setPendingAttachments] = useState<MediaAttachment[]>([])
-  const [isRecording, setIsRecording] = useState(false)
-  const [isTranscribing, setIsTranscribing] = useState(false)
-  const [recordingElapsed, setRecordingElapsed] = useState(0)
   const [isDragOver, setIsDragOver] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesAreaRef = useRef<HTMLDivElement>(null)
-  const recorderRef = useRef<AudioRecorderHandle | null>(null)
-  const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const messages = conversation?.messages || []
   const messagesRef = useRef(messages)
@@ -342,14 +302,6 @@ export function ConversationView({ agent, conversation, onUpdate, onBack }: Conv
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
-
-  // Cleanup recording timer on unmount
-  useEffect(() => {
-    return () => {
-      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current)
-      recorderRef.current?.cancel()
-    }
-  }, [])
 
   const sendMessage = useCallback(async (mediaOverride?: MediaAttachment[], contentOverride?: string) => {
     const mediaToSend = mediaOverride || [...pendingAttachments]
@@ -370,10 +322,7 @@ export function ConversationView({ agent, conversation, onUpdate, onBack }: Conv
     // Build content label for media-only messages
     let content = text
     if (!content && hasMedia) {
-      const labels = mediaToSend.map(m => {
-        if (m.type === 'audio' && m.waveform) return 'Voice message'
-        return `[${m.name || m.type}]`
-      })
+      const labels = mediaToSend.map(m => `[${m.name || m.type}]`)
       content = labels.join(' ')
     }
 
@@ -535,77 +484,6 @@ export function ConversationView({ agent, conversation, onUpdate, onBack }: Conv
     setPendingAttachments(prev => [...prev, ...newAttachments])
   }
 
-  /* ── Voice recording (tap-to-start / tap-to-send) ──────── */
-
-  async function toggleRecording() {
-    if (isRecording) {
-      // Stop, transcribe, then send
-      if (elapsedTimerRef.current) {
-        clearInterval(elapsedTimerRef.current)
-        elapsedTimerRef.current = null
-      }
-      const recorder = recorderRef.current
-      if (!recorder || !recorder.isRecording()) {
-        setIsRecording(false)
-        return
-      }
-      try {
-        const result = await recorder.stop()
-        setIsRecording(false)
-        if (result.duration < 0.5) return
-
-        const voiceAttachment: MediaAttachment = {
-          type: 'audio',
-          url: result.dataUrl,
-          name: 'Voice message',
-          mimeType: 'audio/webm',
-          duration: result.duration,
-          waveform: result.waveform,
-          size: estimateStorageSize(result.dataUrl),
-        }
-
-        // Transcribe audio via Whisper (with fallback handling)
-        setIsTranscribing(true)
-        const transcription = await transcribe(result.audioBlob)
-        setIsTranscribing(false)
-
-        // Send with transcript as content — if transcription failed, include
-        // a clear fallback so the agent knows a voice message was sent
-        const messageContent = transcription.text
-          || '[Voice message — transcription unavailable. Please ask the user to type their message.]'
-        sendMessage([voiceAttachment], messageContent)
-      } catch {
-        setIsRecording(false)
-        setIsTranscribing(false)
-      }
-    } else {
-      // Start recording
-      try {
-        const recorder = createAudioRecorder()
-        recorderRef.current = recorder
-        await recorder.start()
-        setIsRecording(true)
-        setRecordingElapsed(0)
-        elapsedTimerRef.current = setInterval(() => {
-          if (recorderRef.current) {
-            setRecordingElapsed(recorderRef.current.getElapsed())
-          }
-        }, 100)
-      } catch {
-        setIsRecording(false)
-      }
-    }
-  }
-
-  function cancelRecording() {
-    if (elapsedTimerRef.current) {
-      clearInterval(elapsedTimerRef.current)
-      elapsedTimerRef.current = null
-    }
-    recorderRef.current?.cancel()
-    setIsRecording(false)
-  }
-
   /* ── TTS playback ─────────────────────────────────────── */
 
   const [ttsLoadingId, setTtsLoadingId] = useState<string | null>(null)
@@ -703,9 +581,7 @@ export function ConversationView({ agent, conversation, onUpdate, onBack }: Conv
     }))
   }
 
-  const hasInput = input.trim().length > 0
-  const hasContent = hasInput || pendingAttachments.length > 0
-  const showMic = !hasInput && pendingAttachments.length === 0
+  const hasContent = input.trim().length > 0 || pendingAttachments.length > 0
 
   return (
     <div style={{
@@ -883,8 +759,7 @@ export function ConversationView({ agent, conversation, onUpdate, onBack }: Conv
           }
           // Hide auto-generated content labels for media-only messages
           if (msg.media && msg.media.length > 0) {
-            const isAutoLabel = textContent === 'Voice message' ||
-              (textContent.startsWith('[') && textContent.endsWith(']'))
+            const isAutoLabel = textContent.startsWith('[') && textContent.endsWith(']')
             if (isAutoLabel) textContent = ''
           }
 
@@ -1058,114 +933,7 @@ export function ConversationView({ agent, conversation, onUpdate, onBack }: Conv
           </div>
         )}
 
-        {/* Recording UI or normal input */}
-        {isTranscribing ? (
-          /* ── Transcribing state ───────────────────── */
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 'var(--space-3)',
-            background: 'var(--fill-secondary)',
-            borderRadius: 'var(--radius-lg)',
-            padding: 'var(--space-3) var(--space-4)',
-            border: '1px solid var(--separator)',
-            height: 48,
-          }}>
-            <div className="animate-error-pulse" style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: 'var(--accent)',
-              flexShrink: 0,
-            }} />
-            <span style={{
-              fontSize: 'var(--text-footnote)',
-              color: 'var(--text-secondary)',
-              fontWeight: 'var(--weight-medium)',
-            }}>
-              Transcribing...
-            </span>
-          </div>
-        ) : isRecording ? (
-          /* ── Recording mode ───────────────────────── */
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-3)',
-            background: 'var(--fill-secondary)',
-            borderRadius: 'var(--radius-lg)',
-            padding: 'var(--space-3) var(--space-4)',
-            border: '1px solid var(--separator)',
-            height: 48,
-          }}>
-            {/* Cancel button */}
-            <button
-              onClick={cancelRecording}
-              aria-label="Cancel recording"
-              style={{
-                padding: 'var(--space-1) var(--space-3)',
-                borderRadius: 'var(--radius-sm)',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 'var(--text-footnote)',
-                color: 'var(--system-red)',
-                fontWeight: 'var(--weight-medium)',
-                flexShrink: 0,
-              }}
-            >
-              Cancel
-            </button>
-
-            {/* Pulsing red dot */}
-            <div className="animate-error-pulse" style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: 'var(--system-red)',
-              flexShrink: 0,
-            }} />
-
-            {/* Timer */}
-            <span style={{
-              fontSize: 'var(--text-subheadline)',
-              fontWeight: 'var(--weight-medium)',
-              color: 'var(--text-primary)',
-              fontVariantNumeric: 'tabular-nums',
-              flex: 1,
-            }}>
-              {formatDuration(recordingElapsed)}
-            </span>
-
-            {/* Send recording button */}
-            <button
-              onClick={toggleRecording}
-              aria-label="Send voice message"
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                background: 'var(--accent)',
-                color: '#000',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                transition: 'all 150ms var(--ease-smooth)',
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="19" x2="12" y2="5" />
-                <polyline points="5 12 12 5 19 12" />
-              </svg>
-            </button>
-          </div>
-        ) : (
-          /* ── Normal input mode ────────────────────── */
-          <div style={{
+        <div style={{
             display: 'flex',
             alignItems: 'flex-end',
             gap: 'var(--space-2)',
@@ -1232,66 +1000,35 @@ export function ConversationView({ agent, conversation, onUpdate, onBack }: Conv
               }}
             />
 
-            {/* Send or Mic button */}
-            {showMic ? (
-              <button
-                className="focus-ring"
-                aria-label="Record voice message"
-                onClick={toggleRecording}
-                disabled={isStreaming}
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: '50%',
-                  background: 'var(--fill-tertiary)',
-                  color: 'var(--text-secondary)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 150ms var(--ease-smooth)',
-                  flexShrink: 0,
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                  <line x1="12" y1="19" x2="12" y2="23" />
-                  <line x1="8" y1="23" x2="16" y2="23" />
-                </svg>
-              </button>
-            ) : (
-              <button
-                className="focus-ring"
-                onClick={() => sendMessage()}
-                disabled={!hasContent || isStreaming}
-                aria-label="Send message"
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: '50%',
-                  background: hasContent ? 'var(--accent)' : 'var(--fill-tertiary)',
-                  color: hasContent ? '#000' : 'var(--text-quaternary)',
-                  border: 'none',
-                  cursor: hasContent ? 'pointer' : 'default',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 16,
-                  fontWeight: 'var(--weight-bold)',
-                  transition: 'all 150ms var(--ease-smooth)',
-                  flexShrink: 0,
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="19" x2="12" y2="5" />
-                  <polyline points="5 12 12 5 19 12" />
-                </svg>
-              </button>
-            )}
+            {/* Send button */}
+            <button
+              className="focus-ring"
+              onClick={() => sendMessage()}
+              disabled={!hasContent || isStreaming}
+              aria-label="Send message"
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                background: hasContent ? 'var(--accent)' : 'var(--fill-tertiary)',
+                color: hasContent ? '#000' : 'var(--text-quaternary)',
+                border: 'none',
+                cursor: hasContent ? 'pointer' : 'default',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 16,
+                fontWeight: 'var(--weight-bold)',
+                transition: 'all 150ms var(--ease-smooth)',
+                flexShrink: 0,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5" />
+                <polyline points="5 12 12 5 19 12" />
+              </svg>
+            </button>
           </div>
-        )}
 
         {/* Hint */}
         <div style={{
@@ -1300,7 +1037,7 @@ export function ConversationView({ agent, conversation, onUpdate, onBack }: Conv
           textAlign: 'center',
           marginTop: 'var(--space-1)',
         }}>
-          Enter to send &middot; Shift+Enter for newline &middot; Tap mic to record
+          Enter to send &middot; Shift+Enter for newline
         </div>
       </div>
     </div>
