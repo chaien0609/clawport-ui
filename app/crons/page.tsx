@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Agent, CronJob, CronRun } from "@/lib/types";
+import type { Pipeline } from "@/lib/cron-pipelines";
 import { formatDuration } from "@/lib/cron-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RefreshCw, BarChart3, Calendar, GitBranch, Copy, Check } from "lucide-react";
@@ -428,6 +429,7 @@ function RecentRuns({ jobId }: { jobId: string }) {
 export default function CronsPage() {
   const [crons, setCrons] = useState<CronJob[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
   const [tab, setTab] = useState<Tab>("overview");
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -453,8 +455,15 @@ export default function CronsPage() {
         return r.json();
       }),
     ])
-      .then(([c, a]) => {
-        setCrons(c);
+      .then(([cronData, a]) => {
+        // Backward compat: if response is a plain array, treat as crons-only
+        if (Array.isArray(cronData)) {
+          setCrons(cronData);
+          setPipelines([]);
+        } else {
+          setCrons(cronData.crons);
+          setPipelines(cronData.pipelines || []);
+        }
         setAgents(a);
         setLastRefresh(new Date());
         setLoading(false);
@@ -853,7 +862,7 @@ export default function CronsPage() {
             {tab === "schedule" && <WeeklySchedule crons={crons} />}
 
             {/* ─── PIPELINES TAB ─────────────────────────────── */}
-            {tab === "pipelines" && <PipelineGraph crons={crons} />}
+            {tab === "pipelines" && <PipelineGraph crons={crons} agents={agents} pipelines={pipelines} />}
           </>
         )}
       </div>

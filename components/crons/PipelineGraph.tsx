@@ -13,12 +13,15 @@ import {
   ConnectionLineType,
 } from "@xyflow/react"
 import { useEffect, useMemo } from "react"
-import type { CronJob } from "@/lib/types"
-import { PIPELINES, getAllPipelineJobNames } from "@/lib/cron-pipelines"
+import type { Agent, CronJob } from "@/lib/types"
+import type { Pipeline } from "@/lib/cron-pipelines"
+import { getAllPipelineJobNames } from "@/lib/cron-pipelines"
 import { formatDuration } from "@/lib/cron-utils"
 
 interface PipelineGraphProps {
   crons: CronJob[]
+  agents: Agent[]
+  pipelines: Pipeline[]
 }
 
 /* ─── Custom node ─────────────────────────────────────────────── */
@@ -89,32 +92,20 @@ function CronPipelineNode({ data }: NodeProps) {
 
 const pipelineNodeTypes = { cronPipelineNode: CronPipelineNode }
 
-/* ─── Agent colors ─────────────────────────────────────────────── */
-
-const AGENT_COLORS: Record<string, string> = {
-  pulse: "#6366f1",
-  herald: "#f59e0b",
-  robin: "#10b981",
-  lumen: "#3b82f6",
-  echo: "#8b5cf6",
-  spark: "#f97316",
-  scribe: "#14b8a6",
-  kaze: "#ec4899",
-  jarvis: "#ef4444",
-  maven: "#84cc16",
-}
-
 /* ─── Layout builder ──────────────────────────────────────────── */
 
-function buildPipelineLayout(crons: CronJob[]): { nodes: Node[]; edges: Edge[] } {
+function buildPipelineLayout(
+  crons: CronJob[],
+  pipelines: Pipeline[],
+  agentColorMap: Map<string, string>,
+): { nodes: Node[]; edges: Edge[] } {
   const cronMap = new Map(crons.map(c => [c.name, c]))
   const nodes: Node[] = []
   const edges: Edge[] = []
-  const placed = new Set<string>()
 
   let groupY = 0
 
-  for (const pipeline of PIPELINES) {
+  for (const pipeline of pipelines) {
     // Group label node
     nodes.push({
       id: `label-${pipeline.name}`,
@@ -137,7 +128,6 @@ function buildPipelineLayout(crons: CronJob[]): { nodes: Node[]; edges: Edge[] }
     groupY += 36
 
     // Determine node positions using topological ordering
-    // Collect unique job names in this pipeline preserving dependency order
     const jobNames: string[] = []
     for (const edge of pipeline.edges) {
       if (!jobNames.includes(edge.from)) jobNames.push(edge.from)
@@ -147,7 +137,6 @@ function buildPipelineLayout(crons: CronJob[]): { nodes: Node[]; edges: Edge[] }
     // Assign columns by dependency depth
     const depth = new Map<string, number>()
     for (const name of jobNames) depth.set(name, 0)
-    // Iterate to propagate depths
     for (let pass = 0; pass < jobNames.length; pass++) {
       for (const edge of pipeline.edges) {
         const fromD = depth.get(edge.from) || 0
@@ -173,7 +162,6 @@ function buildPipelineLayout(crons: CronJob[]): { nodes: Node[]; edges: Edge[] }
       namesAtDepth.forEach((name, i) => {
         const cron = cronMap.get(name)
         const nodeId = `${pipeline.name}::${name}`
-        placed.add(name)
 
         nodes.push({
           id: nodeId,
@@ -183,7 +171,7 @@ function buildPipelineLayout(crons: CronJob[]): { nodes: Node[]; edges: Edge[] }
             schedule: cron?.scheduleDescription || "—",
             status: cron?.status || "idle",
             deliveryTo: cron?.delivery?.to || null,
-            color: AGENT_COLORS[cron?.agentId || ""] || "var(--text-secondary)",
+            color: agentColorMap.get(cron?.agentId || "") || "var(--text-secondary)",
           } as Record<string, unknown>,
           position: { x: d * colSpacing + 20, y: groupY + i * rowSpacing },
         })
@@ -225,13 +213,83 @@ function buildPipelineLayout(crons: CronJob[]): { nodes: Node[]; edges: Edge[] }
   return { nodes, edges }
 }
 
-/* ─── Standalone crons card grid ─────────────────────────────── */
+/* ─── Empty state ────────────────────────────────────────────── */
 
-function StandaloneCrons({ crons }: { crons: CronJob[] }) {
-  const pipelineNames = getAllPipelineJobNames()
-  const standalone = crons.filter(c => !pipelineNames.has(c.name))
+function PipelinesEmptyState() {
+  return (
+    <div
+      style={{
+        background: "var(--material-regular)",
+        border: "1px solid var(--separator)",
+        borderRadius: "var(--radius-md, 10px)",
+        padding: "32px 24px",
+        textAlign: "center",
+      }}
+    >
+      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
+        No pipelines configured
+      </div>
+      <div style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 480, margin: "0 auto", lineHeight: 1.6 }}>
+        Pipelines visualize file I/O dependencies between cron jobs.
+        To define pipelines, create a JSON file at:
+      </div>
+      <div
+        style={{
+          fontFamily: "var(--font-mono, monospace)",
+          fontSize: 12,
+          color: "var(--accent, #6366f1)",
+          background: "var(--code-bg, rgba(0,0,0,0.1))",
+          border: "1px solid var(--code-border, var(--separator))",
+          borderRadius: 6,
+          padding: "8px 16px",
+          margin: "12px auto",
+          display: "inline-block",
+        }}
+      >
+        $WORKSPACE_PATH/clawport/pipelines.json
+      </div>
+      <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 12, maxWidth: 480, margin: "12px auto 0" }}>
+        Example format:
+      </div>
+      <pre
+        style={{
+          fontFamily: "var(--font-mono, monospace)",
+          fontSize: 11,
+          color: "var(--text-secondary)",
+          background: "var(--code-bg, rgba(0,0,0,0.1))",
+          border: "1px solid var(--code-border, var(--separator))",
+          borderRadius: 6,
+          padding: "12px 16px",
+          margin: "8px auto 0",
+          maxWidth: 420,
+          textAlign: "left",
+          whiteSpace: "pre",
+          overflow: "auto",
+        }}
+      >{`[
+  {
+    "name": "Daily Report",
+    "edges": [
+      { "from": "data-collector", "to": "report-builder", "artifact": "raw-data.json" }
+    ]
+  }
+]`}</pre>
+    </div>
+  )
+}
 
-  if (standalone.length === 0) return null
+/* ─── Crons card grid ────────────────────────────────────────── */
+
+function CronsCardGrid({
+  crons,
+  agentColorMap,
+  label,
+}: {
+  crons: CronJob[]
+  agentColorMap: Map<string, string>
+  label: string
+}) {
+  if (crons.length === 0) return null
 
   return (
     <div style={{ marginTop: 24 }}>
@@ -243,7 +301,7 @@ function StandaloneCrons({ crons }: { crons: CronJob[] }) {
           marginBottom: 12,
         }}
       >
-        Standalone Crons ({standalone.length})
+        {label} ({crons.length})
       </div>
       <div
         style={{
@@ -252,9 +310,9 @@ function StandaloneCrons({ crons }: { crons: CronJob[] }) {
           gap: 10,
         }}
       >
-        {standalone.map(cron => {
+        {crons.map(cron => {
           const statusColor = cron.status === "ok" ? "#22c55e" : cron.status === "error" ? "#ef4444" : "#a1a1aa"
-          const color = AGENT_COLORS[cron.agentId || ""] || "var(--text-secondary)"
+          const color = agentColorMap.get(cron.agentId || "") || "var(--text-secondary)"
 
           return (
             <div
@@ -291,16 +349,45 @@ function StandaloneCrons({ crons }: { crons: CronJob[] }) {
 
 /* ─── Main component ──────────────────────────────────────────── */
 
-export function PipelineGraph({ crons }: PipelineGraphProps) {
-  const layout = useMemo(() => buildPipelineLayout(crons), [crons])
+export function PipelineGraph({ crons, agents, pipelines }: PipelineGraphProps) {
+  const agentColorMap = useMemo(
+    () => new Map(agents.map(a => [a.id, a.color])),
+    [agents],
+  )
+
+  const hasPipelines = pipelines.length > 0
+  const pipelineJobNames = useMemo(() => getAllPipelineJobNames(pipelines), [pipelines])
+  const standaloneCrons = useMemo(
+    () => crons.filter(c => !pipelineJobNames.has(c.name)),
+    [crons, pipelineJobNames],
+  )
+
+  const layout = useMemo(
+    () => hasPipelines ? buildPipelineLayout(crons, pipelines, agentColorMap) : { nodes: [], edges: [] },
+    [crons, pipelines, agentColorMap, hasPipelines],
+  )
   const [nodes, setNodes, onNodesChange] = useNodesState(layout.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(layout.edges)
 
   useEffect(() => {
-    const { nodes: n, edges: e } = buildPipelineLayout(crons)
-    setNodes(n)
-    setEdges(e)
-  }, [crons, setNodes, setEdges])
+    if (hasPipelines) {
+      const { nodes: n, edges: e } = buildPipelineLayout(crons, pipelines, agentColorMap)
+      setNodes(n)
+      setEdges(e)
+    } else {
+      setNodes([])
+      setEdges([])
+    }
+  }, [crons, pipelines, agentColorMap, hasPipelines, setNodes, setEdges])
+
+  if (!hasPipelines) {
+    return (
+      <div>
+        <PipelinesEmptyState />
+        <CronsCardGrid crons={crons} agentColorMap={agentColorMap} label="All Crons" />
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -321,7 +408,7 @@ export function PipelineGraph({ crons }: PipelineGraphProps) {
           <Controls position="bottom-left" style={{ left: 8, bottom: 8 }} />
         </ReactFlow>
       </div>
-      <StandaloneCrons crons={crons} />
+      <CronsCardGrid crons={standaloneCrons} agentColorMap={agentColorMap} label="Standalone Crons" />
     </div>
   )
 }

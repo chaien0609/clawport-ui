@@ -1,69 +1,101 @@
 // @vitest-environment node
-import { describe, it, expect } from 'vitest'
-import { PIPELINES, getPipelinesForJob, getAllPipelineJobNames } from './cron-pipelines'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { Pipeline } from './cron-pipelines'
 
-describe('PIPELINES', () => {
-  it('has 3 pipeline definitions', () => {
-    expect(PIPELINES).toHaveLength(3)
+vi.mock('fs', () => ({
+  existsSync: vi.fn(),
+  readFileSync: vi.fn(),
+}))
+
+import { existsSync, readFileSync } from 'fs'
+import { loadPipelines, getPipelinesForJob, getAllPipelineJobNames } from './cron-pipelines'
+
+const mockExistsSync = vi.mocked(existsSync)
+const mockReadFileSync = vi.mocked(readFileSync)
+
+const SAMPLE_PIPELINES: Pipeline[] = [
+  {
+    name: 'Test Pipeline',
+    edges: [
+      { from: 'job-a', to: 'job-b', artifact: 'data.json' },
+      { from: 'job-b', to: 'job-c', artifact: 'output.txt' },
+    ],
+  },
+  {
+    name: 'Second Pipeline',
+    edges: [
+      { from: 'job-x', to: 'job-y', artifact: 'report.csv' },
+    ],
+  },
+]
+
+describe('loadPipelines', () => {
+  beforeEach(() => {
+    vi.unstubAllEnvs()
+    vi.resetAllMocks()
   })
 
-  it('Morning Briefing has correct edges', () => {
-    const p = PIPELINES.find(p => p.name === 'Morning Briefing')!
-    expect(p.edges).toHaveLength(1)
-    expect(p.edges[0]).toEqual({
-      from: 'vault-morning-snapshot',
-      to: 'builder-briefing',
-      artifact: 'vault-snapshot.json',
-    })
+  it('returns [] when WORKSPACE_PATH is not set', () => {
+    vi.stubEnv('WORKSPACE_PATH', '')
+    expect(loadPipelines()).toEqual([])
   })
 
-  it('Pulse Daily Pipeline has 4 edges', () => {
-    const p = PIPELINES.find(p => p.name === 'Pulse Daily Pipeline')!
-    expect(p.edges).toHaveLength(4)
+  it('returns [] when pipelines.json does not exist', () => {
+    vi.stubEnv('WORKSPACE_PATH', '/tmp/ws')
+    mockExistsSync.mockReturnValue(false)
+    expect(loadPipelines()).toEqual([])
+  })
+
+  it('loads valid pipelines.json', () => {
+    vi.stubEnv('WORKSPACE_PATH', '/tmp/ws')
+    mockExistsSync.mockReturnValue(true)
+    mockReadFileSync.mockReturnValue(JSON.stringify(SAMPLE_PIPELINES))
+    expect(loadPipelines()).toEqual(SAMPLE_PIPELINES)
+  })
+
+  it('returns [] on invalid JSON', () => {
+    vi.stubEnv('WORKSPACE_PATH', '/tmp/ws')
+    mockExistsSync.mockReturnValue(true)
+    mockReadFileSync.mockReturnValue('not valid json{{{')
+    expect(loadPipelines()).toEqual([])
   })
 })
 
 describe('getPipelinesForJob', () => {
   it('finds pipelines for a source job', () => {
-    const result = getPipelinesForJob('vault-morning-snapshot')
+    const result = getPipelinesForJob('job-a', SAMPLE_PIPELINES)
     expect(result).toHaveLength(1)
-    expect(result[0].name).toBe('Morning Briefing')
+    expect(result[0].name).toBe('Test Pipeline')
   })
 
   it('finds pipelines for a target job', () => {
-    const result = getPipelinesForJob('builder-briefing')
+    const result = getPipelinesForJob('job-c', SAMPLE_PIPELINES)
     expect(result).toHaveLength(1)
-    expect(result[0].name).toBe('Morning Briefing')
+    expect(result[0].name).toBe('Test Pipeline')
   })
 
-  it('finds multiple pipelines for jobs in multiple pipelines', () => {
-    const result = getPipelinesForJob('pulse-daily-hype-brief')
-    expect(result).toHaveLength(1) // only in Pulse Daily Pipeline
-    expect(result[0].name).toBe('Pulse Daily Pipeline')
+  it('finds a job that appears in the middle of a pipeline', () => {
+    const result = getPipelinesForJob('job-b', SAMPLE_PIPELINES)
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('Test Pipeline')
   })
 
-  it('returns empty for standalone jobs', () => {
-    const result = getPipelinesForJob('kaze-japan-flights')
-    expect(result).toHaveLength(0)
+  it('returns empty for unknown jobs', () => {
+    expect(getPipelinesForJob('no-such-job', SAMPLE_PIPELINES)).toHaveLength(0)
+  })
+
+  it('returns empty when pipelines array is empty', () => {
+    expect(getPipelinesForJob('job-a', [])).toHaveLength(0)
   })
 })
 
 describe('getAllPipelineJobNames', () => {
-  it('returns all unique job names from pipelines', () => {
-    const names = getAllPipelineJobNames()
-    expect(names.has('vault-morning-snapshot')).toBe(true)
-    expect(names.has('builder-briefing')).toBe(true)
-    expect(names.has('pulse-feed-aggregator')).toBe(true)
-    expect(names.has('pulse-daily-hype-brief')).toBe(true)
-    expect(names.has('herald-linkedin-content')).toBe(true)
-    expect(names.has('pulse-lumen-bridge')).toBe(true)
-    expect(names.has('seo-data-drop-reminder')).toBe(true)
-    expect(names.has('seo-team-weekly')).toBe(true)
+  it('returns all unique job names', () => {
+    const names = getAllPipelineJobNames(SAMPLE_PIPELINES)
+    expect(names).toEqual(new Set(['job-a', 'job-b', 'job-c', 'job-x', 'job-y']))
   })
 
-  it('does not contain standalone jobs', () => {
-    const names = getAllPipelineJobNames()
-    expect(names.has('kaze-japan-flights')).toBe(false)
-    expect(names.has('robin-weekly-brief')).toBe(false)
+  it('returns empty set for empty pipelines', () => {
+    expect(getAllPipelineJobNames([])).toEqual(new Set())
   })
 })

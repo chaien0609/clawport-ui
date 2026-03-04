@@ -64,3 +64,69 @@ export interface MemoryFile {
   content: string
   lastModified: string
 }
+
+// ── Memory Dashboard Types ──────────────────────────────────────
+
+export type MemoryFileCategory = 'evergreen' | 'daily' | 'other'
+
+export interface MemoryFileInfo {
+  label: string
+  path: string
+  relativePath: string
+  content: string
+  lastModified: string
+  sizeBytes: number
+  category: MemoryFileCategory
+}
+
+export interface MemorySearchConfig {
+  enabled: boolean
+  provider: string | null
+  model: string | null
+  hybrid: {
+    enabled: boolean
+    vectorWeight: number
+    textWeight: number
+    temporalDecay: { enabled: boolean; halfLifeDays: number }
+    mmr: { enabled: boolean; lambda: number }
+  }
+  cache: { enabled: boolean; maxEntries: number }
+  extraPaths: string[]
+}
+
+export interface MemoryFlushConfig {
+  enabled: boolean
+  softThresholdTokens: number
+}
+
+export interface MemoryConfig {
+  memorySearch: MemorySearchConfig
+  memoryFlush: MemoryFlushConfig
+  configFound: boolean
+}
+
+export interface MemoryStatus {
+  indexed: boolean
+  lastIndexed: string | null
+  totalEntries: number | null
+  vectorAvailable: boolean | null
+  embeddingProvider: string | null
+  raw: string
+}
+
+export interface MemoryStats {
+  totalFiles: number
+  totalSizeBytes: number
+  dailyLogCount: number
+  evergreenCount: number
+  oldestDaily: string | null
+  newestDaily: string | null
+  dailyTimeline: Array<{ date: string; sizeBytes: number } | null>
+}
+
+export interface MemoryApiResponse {
+  files: MemoryFileInfo[]
+  config: MemoryConfig
+  status: MemoryStatus
+  stats: MemoryStats
+}

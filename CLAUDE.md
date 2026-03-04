@@ -5,7 +5,7 @@
 ```bash
 npm run setup        # Auto-detect OpenClaw config, write .env.local
 npm run dev          # Start dev server (Turbopack, port 3000)
-npm test             # Run all 317 tests via Vitest (17 suites)
+npm test             # Run all 347 tests via Vitest (18 suites)
 npx tsc --noEmit     # Type-check (expect 0 errors)
 npx next build       # Production build
 ```
@@ -166,7 +166,7 @@ Used by: `lib/memory.ts`, `lib/cron-runs.ts`, `lib/kanban/chat-store.ts`, `lib/c
 | `/api/agents` | GET | All agents from registry + SOUL.md |
 | `/api/chat/[id]` | POST | Agent chat -- text (streaming) or vision (send+poll) |
 | `/api/crons` | GET | Cron jobs via `openclaw cron list --json` |
-| `/api/memory` | GET | Memory files from workspace |
+| `/api/memory` | GET | Memory dashboard: files, config, status, stats |
 | `/api/tts` | POST | Text-to-speech via OpenClaw |
 | `/api/transcribe` | POST | Audio transcription via Whisper |
 
@@ -185,6 +185,7 @@ Used by: `lib/memory.ts`, `lib/cron-runs.ts`, `lib/kanban/chat-store.ts`, `lib/c
 | `lib/multimodal.ts` | `buildApiContent()` -- converts Message+Media to OpenAI API format |
 | `lib/settings.ts` | `ClawPortSettings` type, `loadSettings()`, `saveSettings()` (localStorage) |
 | `lib/transcribe.ts` | `transcribe(audioBlob)` -- Whisper API with graceful fallback |
+| `lib/memory.ts` | Memory dashboard: `getMemoryFiles()` (dynamic discovery), `getMemoryConfig()` (openclaw.json reader), `getMemoryStatus()` (CLI status), `computeMemoryStats()` (pure stats) |
 | `lib/validation.ts` | `validateChatMessages()` -- validates text + multimodal content arrays |
 
 ### Chat Components
@@ -216,7 +217,7 @@ Used by: `lib/memory.ts`, `lib/cron-runs.ts`, `lib/kanban/chat-store.ts`, `lib/c
 
 ## Testing
 
-17 test suites, 317 tests total. All in `lib/` directory.
+18 test suites, 347 tests total. All in `lib/` directory.
 
 ```bash
 npx vitest run                     # All tests

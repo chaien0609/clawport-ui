@@ -371,7 +371,7 @@ export function TicketDetailPanel({
     }
   }
 
-  const accentColor = agent?.color || 'var(--accent)'
+  const accentColor = 'var(--accent)'
 
   return (
     <div
