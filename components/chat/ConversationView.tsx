@@ -5,6 +5,7 @@ import type { Agent } from '@/lib/types'
 import type { Conversation, ConversationStore, Message, MediaAttachment } from '@/lib/conversations'
 import { parseMedia, addMessage, updateLastMessage } from '@/lib/conversations'
 import { buildApiContent } from '@/lib/multimodal'
+import { generateId } from '@/lib/id'
 import { useSettings } from '@/app/settings-provider'
 import { FileAttachment } from './FileAttachment'
 import { MediaPreview } from './MediaPreview'
@@ -329,14 +330,14 @@ export function ConversationView({ agent, conversation, onUpdate, onBack }: Conv
     }
 
     const userMsg: Message = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       role: 'user',
       content,
       timestamp: Date.now(),
       media: hasMedia ? mediaToSend : undefined,
     }
 
-    const assistantMsgId = crypto.randomUUID()
+    const assistantMsgId = generateId()
     const assistantMsg: Message = {
       id: assistantMsgId,
       role: 'assistant',
@@ -572,7 +573,7 @@ export function ConversationView({ agent, conversation, onUpdate, onBack }: Conv
       [agent.id]: {
         agentId: agent.id,
         messages: [{
-          id: crypto.randomUUID(),
+          id: generateId(),
           role: 'assistant' as const,
           content: `I'm ${agent.name}. ${agent.description} What do you need?`,
           timestamp: Date.now(),

@@ -51,26 +51,16 @@ export function Sidebar() {
                 }}
               />
             ) : (
-              <div
+              <img
+                src="/clawport-logo.png"
+                alt=""
                 style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '10px',
-                  background: settings.iconBgHidden
-                    ? 'transparent'
-                    : settings.accentColor
-                      ? `linear-gradient(135deg, ${settings.accentColor}, ${settings.accentColor}dd)`
-                      : 'transparent',
-                  boxShadow: settings.iconBgHidden ? 'none' : 'var(--shadow-card)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: settings.iconBgHidden ? '28px' : '18px',
+                  width: '72px',
+                  height: '72px',
+                  objectFit: 'contain',
                   flexShrink: 0,
                 }}
-              >
-                {settings.portalEmoji ?? '\ud83e\udd9e'}
-              </div>
+              />
             )}
             <div>
               <div

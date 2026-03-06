@@ -1,6 +1,7 @@
 'use client'
 
 import type { KanbanTicket, TeamRole } from './types'
+import { generateId } from '../id'
 
 /* ── Role-specific work prompts ──────────────────────── */
 
@@ -159,8 +160,8 @@ export function persistWorkChat(
 ): void {
   const now = Date.now()
   const messages = [
-    { id: crypto.randomUUID(), role: 'user' as const, content: prompt, timestamp: now },
-    { id: crypto.randomUUID(), role: 'assistant' as const, content: response, timestamp: now + 1 },
+    { id: generateId(), role: 'user' as const, content: prompt, timestamp: now },
+    { id: generateId(), role: 'assistant' as const, content: response, timestamp: now + 1 },
   ]
 
   fetch(`/api/kanban/chat-history/${ticketId}`, {

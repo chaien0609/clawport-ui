@@ -1,6 +1,7 @@
 'use client'
 
 import type { KanbanTicket, TicketStatus, TicketPriority, WorkState } from './types'
+import { generateId } from '../id'
 
 export type KanbanStore = Record<string, KanbanTicket>
 
@@ -82,7 +83,7 @@ export function createTicket(
     workResult?: KanbanTicket['workResult']
   },
 ): KanbanStore {
-  const id = crypto.randomUUID()
+  const id = generateId()
   const now = Date.now()
   return {
     ...store,

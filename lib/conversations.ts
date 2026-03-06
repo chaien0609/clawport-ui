@@ -1,6 +1,7 @@
 'use client'
 
 import type { Agent } from './types'
+import { generateId } from './id'
 
 export type MediaType = 'image' | 'audio' | 'file'
 
@@ -56,7 +57,7 @@ export function getOrCreateConversation(store: ConversationStore, agent: Agent):
   return {
     agentId: agent.id,
     messages: [{
-      id: crypto.randomUUID(),
+      id: generateId(),
       role: 'assistant',
       content: `I'm ${agent.name}. ${agent.description} What do you need?`,
       timestamp: Date.now(),

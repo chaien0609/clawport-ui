@@ -6,6 +6,7 @@ import type { Agent } from '@/lib/types'
 import type { KanbanTicket, TicketStatus, TicketPriority } from '@/lib/kanban/types'
 import { PRIORITY_COLORS, ROLE_LABELS, COLUMNS } from '@/lib/kanban/types'
 import { AgentAvatar } from '@/components/AgentAvatar'
+import { generateId } from '@/lib/id'
 
 /* ── Chat message type (local to kanban) ─────────────── */
 
@@ -249,13 +250,13 @@ export function TicketDetailPanel({
     if (!text || isStreaming || !agent) return
 
     const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       role: 'user',
       content: text,
       timestamp: Date.now(),
     }
 
-    const assistantMsgId = crypto.randomUUID()
+    const assistantMsgId = generateId()
     const assistantMsg: ChatMessage = {
       id: assistantMsgId,
       role: 'assistant',

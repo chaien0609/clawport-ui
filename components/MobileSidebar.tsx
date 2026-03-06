@@ -109,23 +109,16 @@ export function MobileSidebar({
               }}
             />
           ) : (
-            <span
+            <img
+              src="/clawport-logo.png"
+              alt=""
               style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '6px',
-                background: settings.accentColor
-                  ? `linear-gradient(135deg, ${settings.accentColor}, ${settings.accentColor}dd)`
-                  : 'transparent',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '13px',
+                width: '48px',
+                height: '48px',
+                objectFit: 'contain',
                 flexShrink: 0,
               }}
-            >
-              {settings.portalEmoji ?? '\ud83e\udd9e'}
-            </span>
+            />
           )}
           <span
             style={{
@@ -198,24 +191,16 @@ export function MobileSidebar({
                 }}
               />
             ) : (
-              <div
+              <img
+                src="/clawport-logo.png"
+                alt=""
                 style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '10px',
-                  background: settings.accentColor
-                    ? `linear-gradient(135deg, ${settings.accentColor}, ${settings.accentColor}dd)`
-                    : 'transparent',
-                  boxShadow: 'var(--shadow-card)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
+                  width: '72px',
+                  height: '72px',
+                  objectFit: 'contain',
                   flexShrink: 0,
                 }}
-              >
-                {settings.portalEmoji ?? '\ud83e\udd9e'}
-              </div>
+              />
             )}
             <div>
               <div
