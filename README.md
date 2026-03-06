@@ -2,7 +2,7 @@
 
 <img src="clawport-logo.png" alt="ClawPort" width="160" />
 
-<img src="clawport-wordmark.svg" alt="ClawPort" width="240" />
+# ClawPort
 
 **A visual command centre for your AI agent team.**
 
