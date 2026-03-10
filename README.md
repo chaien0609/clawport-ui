@@ -20,6 +20,24 @@ ClawPort is an open-source dashboard for managing, monitoring, and talking direc
 
 No separate AI API keys needed. Everything routes through your OpenClaw gateway.
 
+<img src="docs/screenshots/org-map.png" alt="Org Map" width="100%" />
+
+<details>
+<summary><strong>More screenshots</strong></summary>
+
+| | |
+|---|---|
+| <img src="docs/screenshots/chat.png" alt="Agent Chat" /> | <img src="docs/screenshots/kanban.png" alt="Kanban Board" /> |
+| **Chat** -- streaming text, vision, voice, file attachments | **Kanban** -- drag-and-drop task board across agents |
+| <img src="docs/screenshots/pipelines.png" alt="Cron Pipelines" /> | <img src="docs/screenshots/cron-schedule.png" alt="Cron Schedule" /> |
+| **Pipelines** -- DAG visualization with health checks | **Schedule** -- weekly heatmap and job management |
+| <img src="docs/screenshots/activity.png" alt="Activity Console" /> | <img src="docs/screenshots/live-logs.png" alt="Live Logs" /> |
+| **Activity** -- historical log browser with JSON expansion | **Live Logs** -- real-time streaming widget |
+| <img src="docs/screenshots/costs.png" alt="Cost Dashboard" /> | <img src="docs/screenshots/memory.png" alt="Memory Browser" /> |
+| **Costs** -- token usage, anomalies, optimization insights | **Memory** -- team memory browser with markdown rendering |
+
+</details>
+
 ---
 
 ## Quick Start
