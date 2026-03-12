@@ -107,14 +107,19 @@ export function OnboardingWizard({ forceOpen, onClose }: OnboardingWizardProps) 
       return
     }
     if (typeof window !== 'undefined') {
-      if (localStorage.getItem('clawport-onboarded')) return
-      // Check server-side flag before showing wizard
+      const localFlag = localStorage.getItem('clawport-onboarded')
+      // Always verify with server -- workspace may have moved since last session
       fetchOnboarded().then(onboarded => {
         if (onboarded) {
-          localStorage.setItem('clawport-onboarded', '1')
+          if (!localFlag) localStorage.setItem('clawport-onboarded', '1')
         } else {
+          // Server says not onboarded (workspace changed or fresh install)
+          if (localFlag) localStorage.removeItem('clawport-onboarded')
           setVisible(true)
         }
+      }).catch(() => {
+        // Server unreachable -- trust localStorage if set, show wizard if not
+        if (!localFlag) setVisible(true)
       })
     }
   }, [forceOpen]) // eslint-disable-line react-hooks/exhaustive-deps

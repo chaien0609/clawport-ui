@@ -4,6 +4,26 @@ Thank you for your interest in contributing to ClawPort. Whether you are fixing 
 
 This guide covers the conventions and process we follow so that contributions stay consistent and easy to review.
 
+## Scope & Policy
+
+Before opening a PR, please understand what ClawPort is and is not:
+
+- **ClawPort is a UI layer.** It renders data from OpenClaw. It does not execute agents, manage cron jobs, or handle orchestration. Features that belong in the OpenClaw runtime should be contributed upstream at [openclaw.ai](https://openclaw.ai).
+- **English-first.** All UI strings, error messages, log labels, and documentation must be in English. We do not accept localization or i18n PRs at this time.
+- **No server-side string changes** without maintainer approval. Agent registry names, AI system prompts, and slash command text are carefully tuned -- changes need discussion first.
+
+### What we will not merge
+
+To save everyone time, here are PR types we will close without review:
+
+- **Localization / i18n** -- adding translations, non-English strings, or internationalization infrastructure
+- **Docs rewrites** -- wholesale restructuring of existing documentation (small fixes and additions are welcome)
+- **Bundled scope creep** -- PRs that mix unrelated changes (e.g., a feature + a refactor + formatting fixes)
+- **Server-side string changes** -- modifying agent names, AI prompts, or slash command text without prior discussion
+- **Features that belong in OpenClaw** -- agent execution, gateway protocol changes, new CLI commands
+
+See [docs/OPENCLAW.md](docs/OPENCLAW.md) for a detailed breakdown of what belongs in ClawPort vs OpenClaw.
+
 ## Development Setup
 
 1. Fork and clone the repository:
@@ -98,7 +118,7 @@ The npm `prepublishOnly` hook runs `npx tsc --noEmit && vitest run`, so your cod
 
 ```bash
 npx tsc --noEmit     # Zero type errors
-npm test             # All 771 tests pass
+npm test             # All 781 tests pass
 npx next build       # Clean production build (optional but recommended)
 ```
 
@@ -120,6 +140,7 @@ If you want to understand the codebase before diving in, these resources will he
 | [docs/API.md](docs/API.md) | REST API reference for all endpoints |
 | [docs/COMPONENTS.md](docs/COMPONENTS.md) | UI component catalog (50+ components) |
 | [docs/THEMING.md](docs/THEMING.md) | Theme system, CSS custom properties, settings API |
+| [docs/OPENCLAW.md](docs/OPENCLAW.md) | OpenClaw integration: gateway, CLI, ACP, scope boundaries |
 
 Key conventions to know:
 

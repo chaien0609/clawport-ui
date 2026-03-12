@@ -8,7 +8,7 @@
 
 [![npm version](https://img.shields.io/npm/v/clawport-ui.svg)](https://www.npmjs.com/package/clawport-ui)
 [![license](https://img.shields.io/npm/l/clawport-ui.svg)](LICENSE)
-[![tests](https://img.shields.io/badge/tests-771%20passed-brightgreen)](#testing)
+[![tests](https://img.shields.io/badge/tests-781%20passed-brightgreen)](#testing)
 
 [Website](https://clawport.dev) | [Setup Guide](SETUP.md) | [API Docs](docs/API.md) | [npm](https://www.npmjs.com/package/clawport-ui)
 
@@ -189,7 +189,7 @@ clawport help     # Show usage
 ## Testing
 
 ```bash
-npm test             # 771 tests across 31 suites (Vitest)
+npm test             # 781 tests across 32 suites (Vitest)
 npx tsc --noEmit     # Type-check (zero errors)
 npx next build       # Production build
 ```
@@ -217,6 +217,7 @@ npx next build       # Production build
 | [docs/THEMING.md](docs/THEMING.md) | Theme system, CSS tokens, settings API |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
+| [docs/OPENCLAW.md](docs/OPENCLAW.md) | OpenClaw integration reference |
 | [CLAUDE.md](CLAUDE.md) | Developer architecture guide |
 
 ---
